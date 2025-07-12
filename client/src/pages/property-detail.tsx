@@ -1,0 +1,425 @@
+import { useEffect } from "react";
+import { useParams, useLocation } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import { apiRequest } from "@/lib/queryClient";
+import Navigation from "@/components/navigation";
+import Footer from "@/components/footer";
+import ImageGallery from "@/components/image-gallery";
+import ReviewSection from "@/components/review-section";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { 
+  Bed, 
+  Bath, 
+  Maximize, 
+  MapPin, 
+  Calendar,
+  Car,
+  Waves,
+  Dumbbell,
+  Heart,
+  Share2,
+  Phone,
+  Mail,
+  Star,
+  User
+} from "lucide-react";
+import { useState } from "react";
+
+export default function PropertyDetail() {
+  const { id } = useParams();
+  const [, navigate] = useLocation();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const [bookingForm, setBookingForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    message: '',
+    visitDate: '',
+  });
+
+  const { data: property, isLoading, error } = useQuery({
+    queryKey: [`/api/properties/${id}`],
+    enabled: !!id,
+  });
+
+  const bookingMutation = useMutation({
+    mutationFn: async (bookingData: any) => {
+      await apiRequest('POST', `/api/properties/${id}/bookings`, bookingData);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Booking request sent",
+        description: "Your inquiry has been sent to the property owner.",
+      });
+      setBookingForm({
+        name: '',
+        email: '',
+        phone: '',
+        message: '',
+        visitDate: '',
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to send booking request. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+      return;
+    }
+  }, [isAuthenticated, authLoading, toast]);
+
+  const handleBookingSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to send a booking request.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    bookingMutation.mutate(bookingForm);
+  };
+
+  const formatPrice = (price: string) => {
+    const num = parseFloat(price);
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(num);
+  };
+
+  const getAmenityIcon = (amenity: string) => {
+    switch (amenity) {
+      case 'parking': return <Car className="h-4 w-4" />;
+      case 'pool': return <Waves className="h-4 w-4" />;
+      case 'gym': return <Dumbbell className="h-4 w-4" />;
+      default: return null;
+    }
+  };
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navigation />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              <div className="h-96 bg-gray-200 rounded-lg"></div>
+              <div className="h-96 bg-gray-200 rounded-lg"></div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 space-y-6">
+                <div className="h-40 bg-gray-200 rounded-lg"></div>
+                <div className="h-60 bg-gray-200 rounded-lg"></div>
+              </div>
+              <div className="h-80 bg-gray-200 rounded-lg"></div>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error || !property) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navigation />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Property Not Found</h1>
+            <p className="text-gray-600 mb-8">The property you're looking for doesn't exist or has been removed.</p>
+            <Button onClick={() => navigate('/properties')}>
+              Back to Properties
+            </Button>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  const amenities = [];
+  if (property.parking) amenities.push('parking');
+  if (property.pool) amenities.push('pool');
+  if (property.gym) amenities.push('gym');
+  if (property.petFriendly) amenities.push('petFriendly');
+
+  const averageRating = property.reviews?.length > 0 
+    ? property.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / property.reviews.length 
+    : 0;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <Button variant="ghost" onClick={() => navigate('/properties')}>
+              ← Back to Properties
+            </Button>
+            <div className="flex space-x-2">
+              <Button variant="outline" size="sm">
+                <Heart className="h-4 w-4 mr-2" />
+                Save
+              </Button>
+              <Button variant="outline" size="sm">
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
+              </Button>
+            </div>
+          </div>
+          
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{property.title}</h1>
+          <div className="flex items-center text-gray-600 mb-4">
+            <MapPin className="h-4 w-4 mr-1" />
+            <span>{property.location}</span>
+            {averageRating > 0 && (
+              <>
+                <span className="mx-2">•</span>
+                <div className="flex items-center">
+                  <Star className="h-4 w-4 fill-current text-yellow-500 mr-1" />
+                  <span>{averageRating.toFixed(1)} ({property.reviews?.length} reviews)</span>
+                </div>
+              </>
+            )}
+          </div>
+          <div className="text-3xl font-bold text-primary mb-6">
+            {formatPrice(property.price)}
+          </div>
+        </div>
+
+        {/* Image Gallery */}
+        <div className="mb-8">
+          <ImageGallery images={property.images || []} title={property.title} />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Property Details */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Property Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <Bed className="h-6 w-6 mx-auto mb-2 text-gray-600" />
+                    <div className="font-semibold">{property.bedrooms}</div>
+                    <div className="text-sm text-gray-600">Bedrooms</div>
+                  </div>
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <Bath className="h-6 w-6 mx-auto mb-2 text-gray-600" />
+                    <div className="font-semibold">{property.bathrooms}</div>
+                    <div className="text-sm text-gray-600">Bathrooms</div>
+                  </div>
+                  {property.squareFootage && (
+                    <div className="text-center p-4 bg-gray-50 rounded-lg">
+                      <Maximize className="h-6 w-6 mx-auto mb-2 text-gray-600" />
+                      <div className="font-semibold">{property.squareFootage.toLocaleString()}</div>
+                      <div className="text-sm text-gray-600">Sq Ft</div>
+                    </div>
+                  )}
+                  {property.yearBuilt && (
+                    <div className="text-center p-4 bg-gray-50 rounded-lg">
+                      <Calendar className="h-6 w-6 mx-auto mb-2 text-gray-600" />
+                      <div className="font-semibold">{property.yearBuilt}</div>
+                      <div className="text-sm text-gray-600">Year Built</div>
+                    </div>
+                  )}
+                </div>
+
+                <Separator className="my-6" />
+
+                <div>
+                  <h3 className="font-semibold mb-3">Property Type</h3>
+                  <Badge variant="secondary" className="capitalize">
+                    {property.propertyType}
+                  </Badge>
+                </div>
+
+                {amenities.length > 0 && (
+                  <>
+                    <Separator className="my-6" />
+                    <div>
+                      <h3 className="font-semibold mb-3">Amenities</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        {amenities.map((amenity) => (
+                          <div key={amenity} className="flex items-center space-x-2">
+                            {getAmenityIcon(amenity)}
+                            <span className="capitalize">
+                              {amenity === 'petFriendly' ? 'Pet Friendly' : amenity}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {property.description && (
+                  <>
+                    <Separator className="my-6" />
+                    <div>
+                      <h3 className="font-semibold mb-3">Description</h3>
+                      <p className="text-gray-700 whitespace-pre-line">{property.description}</p>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Reviews */}
+            <ReviewSection propertyId={property.id} />
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Contact Agent */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Contact Property Owner</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                    <User className="h-6 w-6 text-gray-500" />
+                  </div>
+                  <div>
+                    <div className="font-semibold">
+                      {property.owner?.firstName ? 
+                        `${property.owner.firstName} ${property.owner.lastName || ''}`.trim() : 
+                        property.owner?.email || 'Property Owner'
+                      }
+                    </div>
+                    <div className="text-sm text-gray-600">Property Owner</div>
+                  </div>
+                </div>
+
+                <form onSubmit={handleBookingSubmit} className="space-y-4">
+                  <div>
+                    <Label htmlFor="name">Your Name</Label>
+                    <Input
+                      id="name"
+                      value={bookingForm.name}
+                      onChange={(e) => setBookingForm({ ...bookingForm, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="email">Your Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={bookingForm.email}
+                      onChange={(e) => setBookingForm({ ...bookingForm, email: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={bookingForm.phone}
+                      onChange={(e) => setBookingForm({ ...bookingForm, phone: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="visitDate">Preferred Visit Date</Label>
+                    <Input
+                      id="visitDate"
+                      type="datetime-local"
+                      value={bookingForm.visitDate}
+                      onChange={(e) => setBookingForm({ ...bookingForm, visitDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="message">Message</Label>
+                    <Textarea
+                      id="message"
+                      rows={4}
+                      placeholder="I'm interested in this property..."
+                      value={bookingForm.message}
+                      onChange={(e) => setBookingForm({ ...bookingForm, message: e.target.value })}
+                    />
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={bookingMutation.isPending}
+                  >
+                    {bookingMutation.isPending ? 'Sending...' : 'Send Inquiry'}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Quick Contact */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  <Button variant="outline" className="w-full justify-start">
+                    <Phone className="h-4 w-4 mr-2" />
+                    Call Owner
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start">
+                    <Mail className="h-4 w-4 mr-2" />
+                    Send Email
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      <Footer />
+    </div>
+  );
+}

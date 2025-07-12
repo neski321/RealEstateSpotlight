@@ -1,0 +1,55 @@
+# Node modules
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build output
+dist/
+client/dist/
+server/dist/
+build/
+client/build/
+server/build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables and secrets
+.env
+.env.*
+client/.env
+server/.env
+*.key
+*.pem
+*.p12
+*.crt
+firebase-adminsdk-*.json
+serviceAccountKey.json
+google-services.json
+
+# OS-specific files
+.DS_Store
+server/public
+vite.config.ts.*
+*.tar.gz
+Thumbs.db
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.swp
+
+# Dependency lock files (optional, if you want to ignore them)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Firebase/other service config (if sensitive)
+FIREBASE_SETUP.md
+
+# Misc
+*.local
+*.log
