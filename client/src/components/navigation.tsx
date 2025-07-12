@@ -10,13 +10,17 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Home, Search, Plus, User, Settings, LogOut } from "lucide-react";
+import { Home, Search, Plus, User, Settings, LogOut, Heart } from "lucide-react";
 import { useState } from "react";
+import { Switch } from "@/components/ui/switch";
+import { useTheme } from "@/contexts/ThemeContext";
+import { Sun, Moon } from "lucide-react";
 
 export default function Navigation() {
   const [location] = useLocation();
   const { currentUser, signOutUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const { theme, toggleTheme } = useTheme();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,14 +38,14 @@ export default function Navigation() {
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-background shadow-sm border-b border-border sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
               <Home className="h-8 w-8 text-primary mr-2" />
-              <span className="text-xl font-bold text-gray-900">PropertyHub</span>
+              <span className="text-xl font-bold text-foreground">PropertyHub</span>
             </div>
           </Link>
 
@@ -49,29 +53,41 @@ export default function Navigation() {
           <div className="hidden md:block flex-1 max-w-2xl mx-8">
             <form onSubmit={handleSearch} className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
+                <Search className="h-5 w-5 text-muted-foreground" />
               </div>
               <Input
                 type="text"
                 placeholder="Search by location, property type, or keywords..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               />
             </form>
           </div>
 
           {/* Navigation Links */}
           <div className="flex items-center space-x-4">
+            {/* Theme Toggle */}
+            <div className="flex items-center space-x-2">
+              <Sun className={`h-5 w-5 ${theme === 'light' ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+              <Switch checked={theme === 'dark'} onCheckedChange={toggleTheme} />
+              <Moon className={`h-5 w-5 ${theme === 'dark' ? 'text-blue-500' : 'text-muted-foreground'}`} />
+            </div>
             {currentUser ? (
               <>
                 <Link href="/properties">
-                  <Button variant="ghost" className="text-gray-700 hover:text-primary">
+                  <Button variant="ghost" className="text-muted-foreground hover:text-primary">
                     Browse
                   </Button>
                 </Link>
+                <Link href="/favorites">
+                  <Button variant="ghost" className="text-muted-foreground hover:text-primary">
+                    <Heart className="h-4 w-4 mr-2" />
+                    Favorites
+                  </Button>
+                </Link>
                 <Link href="/create-listing">
-                  <Button variant="ghost" className="text-gray-700 hover:text-primary">
+                  <Button variant="ghost" className="text-muted-foreground hover:text-primary">
                     <Plus className="h-4 w-4 mr-2" />
                     List Property
                   </Button>
@@ -85,7 +101,7 @@ export default function Navigation() {
                           {currentUser.displayName?.[0] || currentUser.email?.[0] || "U"}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="font-medium hidden sm:block">
+                      <span className="font-medium hidden sm:block text-foreground">
                         {currentUser.displayName || currentUser.email}
                       </span>
                     </Button>
@@ -98,9 +114,9 @@ export default function Navigation() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/settings" className="flex items-center">
-                        <Settings className="mr-2 h-4 w-4" />
-                        Settings
+                      <Link href="/profile" className="flex items-center">
+                        <User className="mr-2 h-4 w-4" />
+                        Profile
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -114,7 +130,7 @@ export default function Navigation() {
             ) : (
               <>
                 <Link href="/properties">
-                  <Button variant="ghost" className="text-gray-700 hover:text-primary">
+                  <Button variant="ghost" className="text-muted-foreground hover:text-primary">
                     Browse
                   </Button>
                 </Link>

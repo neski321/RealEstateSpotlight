@@ -10,6 +10,8 @@ import Properties from "@/pages/properties";
 import PropertyDetail from "@/pages/property-detail";
 import CreateListing from "@/pages/create-listing";
 import Dashboard from "@/pages/dashboard";
+import Profile from "@/pages/profile";
+import Favorites from "@/pages/favorites";
 import AuthPage from "@/pages/auth";
 import NotFound from "@/pages/not-found";
 
@@ -37,6 +39,8 @@ function Router() {
           <Route path="/property/:id" component={PropertyDetail} />
           <Route path="/create-listing" component={CreateListing} />
           <Route path="/dashboard" component={Dashboard} />
+          <Route path="/profile" component={Profile} />
+          <Route path="/favorites" component={Favorites} />
           <Route component={NotFound} />
         </>
       )}

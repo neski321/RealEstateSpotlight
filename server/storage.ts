@@ -4,6 +4,9 @@ import {
   propertyImages,
   reviews,
   bookings,
+  favorites,
+  searchHistory,
+  viewingHistory,
   type User,
   type UpsertUser,
   type Property,
@@ -14,8 +17,17 @@ import {
   type InsertReview,
   type Booking,
   type InsertBooking,
+  type Favorite,
+  type InsertFavorite,
+  type SearchHistory,
+  type InsertSearchHistory,
+  type ViewingHistory,
+  type InsertViewingHistory,
   type PropertyWithDetails,
   type PropertyWithStats,
+  type UserWithDetails,
+  type FavoriteWithProperty,
+  type ViewingHistoryWithProperty,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, and, or, ilike, avg, count, sql } from "drizzle-orm";
@@ -23,7 +35,28 @@ import { eq, desc, asc, and, or, ilike, avg, count, sql } from "drizzle-orm";
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
+  getUserWithDetails(id: string): Promise<UserWithDetails | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  updateUserProfile(id: string, profileData: Partial<UpsertUser>): Promise<User>;
+  updateUserPreferences(id: string, preferences: any): Promise<User>;
+  updateNotificationSettings(id: string, settings: any): Promise<User>;
+  updatePrivacySettings(id: string, settings: any): Promise<User>;
+  
+  // Favorites operations
+  addToFavorites(userId: string, propertyId: number, notes?: string): Promise<Favorite>;
+  removeFromFavorites(userId: string, propertyId: number): Promise<void>;
+  getUserFavorites(userId: string): Promise<FavoriteWithProperty[]>;
+  isPropertyFavorited(userId: string, propertyId: number): Promise<boolean>;
+  
+  // Search history operations
+  addSearchHistory(userId: string, searchQuery: string, filters?: any): Promise<SearchHistory>;
+  getUserSearchHistory(userId: string, limit?: number): Promise<SearchHistory[]>;
+  clearSearchHistory(userId: string): Promise<void>;
+  
+  // Viewing history operations
+  addViewingHistory(userId: string, propertyId: number): Promise<ViewingHistory>;
+  getUserViewingHistory(userId: string, limit?: number): Promise<ViewingHistoryWithProperty[]>;
+  clearViewingHistory(userId: string): Promise<void>;
   
   // Property operations
   getProperties(filters?: {
@@ -67,10 +100,35 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // User operations
+  // Enhanced User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
+  }
+
+  async getUserWithDetails(id: string): Promise<UserWithDetails | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    
+    if (!user) return undefined;
+
+    const [userFavorites, userSearchHistory, userViewingHistory, userProperties, userReviews, userBookings] = await Promise.all([
+      this.getUserFavorites(id),
+      this.getUserSearchHistory(id),
+      this.getUserViewingHistory(id),
+      this.getUserProperties(id),
+      this.getUserReviews(id),
+      this.getUserBookings(id),
+    ]);
+
+    return {
+      ...user,
+      favorites: userFavorites.map(f => ({ id: f.id, userId: f.userId, propertyId: f.propertyId, notes: f.notes, createdAt: f.createdAt })),
+      searchHistory: userSearchHistory,
+      viewingHistory: userViewingHistory.map(v => ({ id: v.id, userId: v.userId, propertyId: v.propertyId, viewedAt: v.viewedAt })),
+      properties: userProperties,
+      reviews: userReviews,
+      bookings: userBookings,
+    };
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
@@ -86,6 +144,289 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  async updateUserProfile(id: string, profileData: Partial<UpsertUser>): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({ ...profileData, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+
+  async updateUserPreferences(id: string, preferences: any): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({ preferences, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+
+  async updateNotificationSettings(id: string, settings: any): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({ notificationSettings: settings, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+
+  async updatePrivacySettings(id: string, settings: any): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({ privacySettings: settings, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+
+  // Favorites operations
+  async addToFavorites(userId: string, propertyId: number, notes?: string): Promise<Favorite> {
+    const [favorite] = await db
+      .insert(favorites)
+      .values({ userId, propertyId, notes })
+      .onConflictDoUpdate({
+        target: [favorites.userId, favorites.propertyId],
+        set: { notes },
+      })
+      .returning();
+    return favorite;
+  }
+
+  async removeFromFavorites(userId: string, propertyId: number): Promise<void> {
+    await db
+      .delete(favorites)
+      .where(and(eq(favorites.userId, userId), eq(favorites.propertyId, propertyId)));
+  }
+
+  async getUserFavorites(userId: string): Promise<FavoriteWithProperty[]> {
+    const userFavorites = await db
+      .select({
+        id: favorites.id,
+        userId: favorites.userId,
+        propertyId: favorites.propertyId,
+        notes: favorites.notes,
+        createdAt: favorites.createdAt,
+        // Property fields
+        title: properties.title,
+        description: properties.description,
+        price: properties.price,
+        location: properties.location,
+        city: properties.city,
+        state: properties.state,
+        zipCode: properties.zipCode,
+        propertyType: properties.propertyType,
+        bedrooms: properties.bedrooms,
+        bathrooms: properties.bathrooms,
+        squareFootage: properties.squareFootage,
+        yearBuilt: properties.yearBuilt,
+        parking: properties.parking,
+        pool: properties.pool,
+        gym: properties.gym,
+        petFriendly: properties.petFriendly,
+        furnished: properties.furnished,
+        available: properties.available,
+        featured: properties.featured,
+        ownerId: properties.ownerId,
+        propertyCreatedAt: properties.createdAt,
+        propertyUpdatedAt: properties.updatedAt,
+        averageRating: avg(reviews.rating),
+        reviewCount: count(reviews.id),
+      })
+      .from(favorites)
+      .innerJoin(properties, eq(favorites.propertyId, properties.id))
+      .leftJoin(reviews, eq(properties.id, reviews.propertyId))
+      .where(eq(favorites.userId, userId))
+      .groupBy(favorites.id, properties.id)
+      .orderBy(desc(favorites.createdAt));
+
+    // Get images for each property
+    const favoritesWithImages = await Promise.all(
+      userFavorites.map(async (favorite) => {
+        const images = await this.getPropertyImages(favorite.propertyId);
+        const primaryImage = images.find(img => img.isPrimary) || images[0];
+        
+        return {
+          id: favorite.id,
+          userId: favorite.userId,
+          propertyId: favorite.propertyId,
+          notes: favorite.notes,
+          createdAt: favorite.createdAt,
+          property: {
+            id: favorite.propertyId,
+            title: favorite.title,
+            description: favorite.description,
+            price: favorite.price,
+            location: favorite.location,
+            city: favorite.city,
+            state: favorite.state,
+            zipCode: favorite.zipCode,
+            propertyType: favorite.propertyType,
+            bedrooms: favorite.bedrooms,
+            bathrooms: favorite.bathrooms,
+            squareFootage: favorite.squareFootage,
+            yearBuilt: favorite.yearBuilt,
+            parking: favorite.parking,
+            pool: favorite.pool,
+            gym: favorite.gym,
+            petFriendly: favorite.petFriendly,
+            furnished: favorite.furnished,
+            available: favorite.available,
+            featured: favorite.featured,
+            ownerId: favorite.ownerId,
+            createdAt: favorite.propertyCreatedAt,
+            updatedAt: favorite.propertyUpdatedAt,
+            images,
+            primaryImage,
+            averageRating: favorite.averageRating ? Number(favorite.averageRating) : 0,
+            reviewCount: Number(favorite.reviewCount),
+          },
+        };
+      })
+    );
+
+    return favoritesWithImages;
+  }
+
+  async isPropertyFavorited(userId: string, propertyId: number): Promise<boolean> {
+    const [favorite] = await db
+      .select()
+      .from(favorites)
+      .where(and(eq(favorites.userId, userId), eq(favorites.propertyId, propertyId)));
+    return !!favorite;
+  }
+
+  // Search history operations
+  async addSearchHistory(userId: string, searchQuery: string, filters?: any): Promise<SearchHistory> {
+    const [searchRecord] = await db
+      .insert(searchHistory)
+      .values({ userId, searchQuery, filters })
+      .returning();
+    return searchRecord;
+  }
+
+  async getUserSearchHistory(userId: string, limit: number = 20): Promise<SearchHistory[]> {
+    return await db
+      .select()
+      .from(searchHistory)
+      .where(eq(searchHistory.userId, userId))
+      .orderBy(desc(searchHistory.createdAt))
+      .limit(limit);
+  }
+
+  async clearSearchHistory(userId: string): Promise<void> {
+    await db
+      .delete(searchHistory)
+      .where(eq(searchHistory.userId, userId));
+  }
+
+  // Viewing history operations
+  async addViewingHistory(userId: string, propertyId: number): Promise<ViewingHistory> {
+    const [viewingRecord] = await db
+      .insert(viewingHistory)
+      .values({ userId, propertyId })
+      .onConflictDoUpdate({
+        target: [viewingHistory.userId, viewingHistory.propertyId],
+        set: { viewedAt: new Date() },
+      })
+      .returning();
+    return viewingRecord;
+  }
+
+  async getUserViewingHistory(userId: string, limit: number = 20): Promise<ViewingHistoryWithProperty[]> {
+    const viewingRecords = await db
+      .select({
+        id: viewingHistory.id,
+        userId: viewingHistory.userId,
+        propertyId: viewingHistory.propertyId,
+        viewedAt: viewingHistory.viewedAt,
+        // Property fields
+        title: properties.title,
+        description: properties.description,
+        price: properties.price,
+        location: properties.location,
+        city: properties.city,
+        state: properties.state,
+        zipCode: properties.zipCode,
+        propertyType: properties.propertyType,
+        bedrooms: properties.bedrooms,
+        bathrooms: properties.bathrooms,
+        squareFootage: properties.squareFootage,
+        yearBuilt: properties.yearBuilt,
+        parking: properties.parking,
+        pool: properties.pool,
+        gym: properties.gym,
+        petFriendly: properties.petFriendly,
+        furnished: properties.furnished,
+        available: properties.available,
+        featured: properties.featured,
+        ownerId: properties.ownerId,
+        propertyCreatedAt: properties.createdAt,
+        propertyUpdatedAt: properties.updatedAt,
+        averageRating: avg(reviews.rating),
+        reviewCount: count(reviews.id),
+      })
+      .from(viewingHistory)
+      .innerJoin(properties, eq(viewingHistory.propertyId, properties.id))
+      .leftJoin(reviews, eq(properties.id, reviews.propertyId))
+      .where(eq(viewingHistory.userId, userId))
+      .groupBy(viewingHistory.id, properties.id)
+      .orderBy(desc(viewingHistory.viewedAt))
+      .limit(limit);
+
+    // Get images for each property
+    const viewingHistoryWithImages = await Promise.all(
+      viewingRecords.map(async (record) => {
+        const images = await this.getPropertyImages(record.propertyId);
+        const primaryImage = images.find(img => img.isPrimary) || images[0];
+        
+        return {
+          id: record.id,
+          userId: record.userId,
+          propertyId: record.propertyId,
+          viewedAt: record.viewedAt,
+          property: {
+            id: record.propertyId,
+            title: record.title,
+            description: record.description,
+            price: record.price,
+            location: record.location,
+            city: record.city,
+            state: record.state,
+            zipCode: record.zipCode,
+            propertyType: record.propertyType,
+            bedrooms: record.bedrooms,
+            bathrooms: record.bathrooms,
+            squareFootage: record.squareFootage,
+            yearBuilt: record.yearBuilt,
+            parking: record.parking,
+            pool: record.pool,
+            gym: record.gym,
+            petFriendly: record.petFriendly,
+            furnished: record.furnished,
+            available: record.available,
+            featured: record.featured,
+            ownerId: record.ownerId,
+            createdAt: record.propertyCreatedAt,
+            updatedAt: record.propertyUpdatedAt,
+            images,
+            primaryImage,
+            averageRating: record.averageRating ? Number(record.averageRating) : 0,
+            reviewCount: Number(record.reviewCount),
+          },
+        };
+      })
+    );
+
+    return viewingHistoryWithImages;
+  }
+
+  async clearViewingHistory(userId: string): Promise<void> {
+    await db
+      .delete(viewingHistory)
+      .where(eq(viewingHistory.userId, userId));
   }
 
   // Property operations

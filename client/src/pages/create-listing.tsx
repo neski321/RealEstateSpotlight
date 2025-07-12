@@ -19,7 +19,8 @@ import { Upload, X, Image as ImageIcon } from "lucide-react";
 
 export default function CreateListing() {
   const [, navigate] = useLocation();
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { currentUser, loading } = useAuth();
+  const isAuthenticated = !!currentUser;
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -47,7 +48,7 @@ export default function CreateListing() {
   const [currentStep, setCurrentStep] = useState(1);
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (!loading && !isAuthenticated) {
       toast({
         title: "Unauthorized",
         description: "You are logged out. Logging in again...",
@@ -58,7 +59,7 @@ export default function CreateListing() {
       }, 500);
       return;
     }
-  }, [isAuthenticated, authLoading, toast]);
+  }, [isAuthenticated, loading, toast]);
 
   const createPropertyMutation = useMutation({
     mutationFn: async (propertyData: any) => {
@@ -166,9 +167,9 @@ export default function CreateListing() {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  if (authLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background text-foreground">
         <Navigation />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="animate-pulse">
@@ -182,7 +183,7 @@ export default function CreateListing() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       <Navigation />
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -30,11 +30,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function Dashboard() {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { currentUser, loading } = useAuth();
+  const isAuthenticated = !!currentUser;
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (!loading && !isAuthenticated) {
       toast({
         title: "Unauthorized",
         description: "You are logged out. Logging in again...",
@@ -45,7 +46,7 @@ export default function Dashboard() {
       }, 500);
       return;
     }
-  }, [isAuthenticated, authLoading, toast]);
+  }, [isAuthenticated, loading, toast]);
 
   const { data: userProperties = [], isLoading: propertiesLoading } = useQuery({
     queryKey: ['/api/user/properties'],
@@ -72,9 +73,9 @@ export default function Dashboard() {
     }
   };
 
-  if (authLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background text-foreground">
         <Navigation />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="animate-pulse">
@@ -93,14 +94,14 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       <Navigation />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {user?.firstName || 'User'}!
+            Welcome back, {currentUser?.firstName || 'User'}!
           </h1>
           <p className="text-gray-600">Manage your property listings and track your performance</p>
         </div>

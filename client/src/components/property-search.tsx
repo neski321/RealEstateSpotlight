@@ -31,12 +31,12 @@ export default function PropertySearch({ onSearch }: PropertySearchProps) {
   };
 
   return (
-    <Card className="bg-white shadow-xl">
+    <Card className="bg-card shadow-xl">
       <CardContent className="p-6">
         <form onSubmit={handleSearch} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <Label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+              <Label htmlFor="location" className="block text-sm font-medium text-card-foreground mb-2">
                 Location
               </Label>
               <Input
@@ -50,7 +50,7 @@ export default function PropertySearch({ onSearch }: PropertySearchProps) {
             </div>
             
             <div>
-              <Label htmlFor="propertyType" className="block text-sm font-medium text-gray-700 mb-2">
+              <Label htmlFor="propertyType" className="block text-sm font-medium text-card-foreground mb-2">
                 Property Type
               </Label>
               <Select value={searchParams.propertyType} onValueChange={(value) => handleInputChange('propertyType', value)}>
@@ -68,7 +68,7 @@ export default function PropertySearch({ onSearch }: PropertySearchProps) {
             </div>
             
             <div>
-              <Label htmlFor="priceRange" className="block text-sm font-medium text-gray-700 mb-2">
+              <Label htmlFor="priceRange" className="block text-sm font-medium text-card-foreground mb-2">
                 Price Range
               </Label>
               <Select value={searchParams.priceRange} onValueChange={(value) => handleInputChange('priceRange', value)}>
@@ -86,7 +86,7 @@ export default function PropertySearch({ onSearch }: PropertySearchProps) {
             </div>
             
             <div>
-              <Label htmlFor="bedrooms" className="block text-sm font-medium text-gray-700 mb-2">
+              <Label htmlFor="bedrooms" className="block text-sm font-medium text-card-foreground mb-2">
                 Bedrooms
               </Label>
               <Select value={searchParams.bedrooms} onValueChange={(value) => handleInputChange('bedrooms', value)}>
@@ -104,7 +104,7 @@ export default function PropertySearch({ onSearch }: PropertySearchProps) {
             </div>
           </div>
           
-          <Button type="submit" className="w-full bg-primary text-white hover:bg-primary/90">
+          <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
             <Search className="h-4 w-4 mr-2" />
             Search Properties
           </Button>

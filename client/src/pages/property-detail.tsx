@@ -54,6 +54,109 @@ export default function PropertyDetail() {
     enabled: !!id,
   });
 
+  // Add viewing history when property loads
+  const addViewingHistoryMutation = useMutation({
+    mutationFn: async () => {
+      if (id && isAuthenticated) {
+        await apiRequest('POST', `/api/viewing-history/${id}`, {});
+      }
+    },
+  });
+
+  // Check if property is favorited
+  const { data: favoriteStatus } = useQuery({
+    queryKey: [`/api/favorites/${id}/check`],
+    enabled: isAuthenticated && !!id,
+  });
+
+  // Add to favorites mutation
+  const addToFavoritesMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest('POST', `/api/favorites/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/favorites'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/favorites/${id}/check`] });
+      toast({
+        title: "Added to favorites",
+        description: "Property has been added to your favorites.",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Sign in required",
+          description: "Please sign in to add properties to favorites.",
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to add to favorites. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Remove from favorites mutation
+  const removeFromFavoritesMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest('DELETE', `/api/favorites/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/favorites'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/favorites/${id}/check`] });
+      toast({
+        title: "Removed from favorites",
+        description: "Property has been removed from your favorites.",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Sign in required",
+          description: "Please sign in to manage favorites.",
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to remove from favorites. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Add viewing history when property loads
+  useEffect(() => {
+    if (property && isAuthenticated && id) {
+      addViewingHistoryMutation.mutate();
+    }
+  }, [property, isAuthenticated, id]);
+
+  const handleFavoriteToggle = () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to add properties to favorites.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const isFavorited = favoriteStatus && typeof favoriteStatus === 'object' && 'isFavorited' in favoriteStatus 
+      ? (favoriteStatus as any).isFavorited 
+      : false;
+    
+    if (isFavorited) {
+      removeFromFavoritesMutation.mutate();
+    } else {
+      addToFavoritesMutation.mutate();
+    }
+  };
+
   const bookingMutation = useMutation({
     mutationFn: async (bookingData: any) => {
       await apiRequest('POST', `/api/properties/${id}/bookings`, bookingData);
@@ -140,21 +243,21 @@ export default function PropertyDetail() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background text-foreground">
         <Navigation />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
+            <div className="h-8 bg-muted rounded w-1/3 mb-6"></div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-              <div className="h-96 bg-gray-200 rounded-lg"></div>
-              <div className="h-96 bg-gray-200 rounded-lg"></div>
+              <div className="h-96 bg-muted rounded-lg"></div>
+              <div className="h-96 bg-muted rounded-lg"></div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-6">
-                <div className="h-40 bg-gray-200 rounded-lg"></div>
-                <div className="h-60 bg-gray-200 rounded-lg"></div>
+                <div className="h-40 bg-muted rounded-lg"></div>
+                <div className="h-60 bg-muted rounded-lg"></div>
               </div>
-              <div className="h-80 bg-gray-200 rounded-lg"></div>
+              <div className="h-80 bg-muted rounded-lg"></div>
             </div>
           </div>
         </div>
@@ -165,12 +268,12 @@ export default function PropertyDetail() {
 
   if (error || !property) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background text-foreground">
         <Navigation />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Property Not Found</h1>
-            <p className="text-gray-600 mb-8">The property you're looking for doesn't exist or has been removed.</p>
+            <h1 className="text-2xl font-bold text-foreground mb-4">Property Not Found</h1>
+            <p className="text-muted-foreground mb-8">The property you're looking for doesn't exist or has been removed.</p>
             <Button onClick={() => navigate('/properties')}>
               Back to Properties
             </Button>
@@ -192,7 +295,7 @@ export default function PropertyDetail() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       <Navigation />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -203,9 +306,14 @@ export default function PropertyDetail() {
               ← Back to Properties
             </Button>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
-                <Heart className="h-4 w-4 mr-2" />
-                Save
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleFavoriteToggle}
+                disabled={addToFavoritesMutation.isPending || removeFromFavoritesMutation.isPending}
+              >
+                <Heart className={`h-4 w-4 mr-2 ${favoriteStatus && typeof favoriteStatus === 'object' && 'isFavorited' in favoriteStatus && (favoriteStatus as any).isFavorited ? 'fill-current text-red-500' : ''}`} />
+                {favoriteStatus && typeof favoriteStatus === 'object' && 'isFavorited' in favoriteStatus && (favoriteStatus as any).isFavorited ? 'Saved' : 'Save'}
               </Button>
               <Button variant="outline" size="sm">
                 <Share2 className="h-4 w-4 mr-2" />
@@ -214,8 +322,8 @@ export default function PropertyDetail() {
             </div>
           </div>
           
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{property.title}</h1>
-          <div className="flex items-center text-gray-600 mb-4">
+          <h1 className="text-3xl font-bold text-foreground mb-2">{property.title}</h1>
+          <div className="flex items-center text-muted-foreground mb-4">
             <MapPin className="h-4 w-4 mr-1" />
             <span>{property.location}</span>
             {averageRating > 0 && (
@@ -248,28 +356,28 @@ export default function PropertyDetail() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <Bed className="h-6 w-6 mx-auto mb-2 text-gray-600" />
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <Bed className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
                     <div className="font-semibold">{property.bedrooms}</div>
-                    <div className="text-sm text-gray-600">Bedrooms</div>
+                    <div className="text-sm text-muted-foreground">Bedrooms</div>
                   </div>
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <Bath className="h-6 w-6 mx-auto mb-2 text-gray-600" />
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <Bath className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
                     <div className="font-semibold">{property.bathrooms}</div>
-                    <div className="text-sm text-gray-600">Bathrooms</div>
+                    <div className="text-sm text-muted-foreground">Bathrooms</div>
                   </div>
                   {property.squareFootage && (
-                    <div className="text-center p-4 bg-gray-50 rounded-lg">
-                      <Maximize className="h-6 w-6 mx-auto mb-2 text-gray-600" />
+                    <div className="text-center p-4 bg-muted rounded-lg">
+                      <Maximize className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
                       <div className="font-semibold">{property.squareFootage.toLocaleString()}</div>
-                      <div className="text-sm text-gray-600">Sq Ft</div>
+                      <div className="text-sm text-muted-foreground">Sq Ft</div>
                     </div>
                   )}
                   {property.yearBuilt && (
-                    <div className="text-center p-4 bg-gray-50 rounded-lg">
-                      <Calendar className="h-6 w-6 mx-auto mb-2 text-gray-600" />
+                    <div className="text-center p-4 bg-muted rounded-lg">
+                      <Calendar className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
                       <div className="font-semibold">{property.yearBuilt}</div>
-                      <div className="text-sm text-gray-600">Year Built</div>
+                      <div className="text-sm text-muted-foreground">Year Built</div>
                     </div>
                   )}
                 </div>
@@ -327,8 +435,8 @@ export default function PropertyDetail() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                    <User className="h-6 w-6 text-gray-500" />
+                  <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+                    <User className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <div>
                     <div className="font-semibold">
@@ -337,7 +445,7 @@ export default function PropertyDetail() {
                         property.owner?.email || 'Property Owner'
                       }
                     </div>
-                    <div className="text-sm text-gray-600">Property Owner</div>
+                    <div className="text-sm text-muted-foreground">Property Owner</div>
                   </div>
                 </div>
 

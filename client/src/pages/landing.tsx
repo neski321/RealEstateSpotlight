@@ -51,7 +51,7 @@ export default function Landing() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       <Navigation />
       
       {/* Hero Section */}
@@ -67,7 +67,7 @@ export default function Landing() {
         <div className="relative z-10 h-full flex items-center justify-center">
           <div className="text-center text-white max-w-4xl px-4">
             <h1 className="text-4xl md:text-6xl font-bold mb-6">Find Your Perfect Home</h1>
-            <p className="text-xl md:text-2xl mb-8 text-gray-200">
+            <p className="text-xl md:text-2xl mb-8 text-muted-foreground">
               Discover amazing properties from trusted agents and owners
             </p>
             
@@ -79,22 +79,22 @@ export default function Landing() {
       </section>
 
       {/* Featured Properties */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Featured Properties</h2>
-            <p className="text-lg text-gray-600">Handpicked properties from our premium collection</p>
+            <h2 className="text-3xl font-bold text-foreground mb-4">Featured Properties</h2>
+            <p className="text-lg text-muted-foreground">Handpicked properties from our premium collection</p>
           </div>
 
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="animate-pulse">
-                  <div className="bg-gray-200 h-48 rounded-lg mb-4"></div>
+                  <div className="bg-muted h-48 rounded-lg mb-4"></div>
                   <div className="space-y-2">
-                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                    <div className="h-4 bg-muted rounded w-3/4"></div>
+                    <div className="h-4 bg-muted rounded w-1/2"></div>
+                    <div className="h-4 bg-muted rounded w-1/4"></div>
                   </div>
                 </div>
               ))}
@@ -120,40 +120,40 @@ export default function Landing() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-16 bg-muted">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="bg-primary/10 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
                 <TrendingUp className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">10,000+</h3>
-              <p className="text-gray-600">Properties Listed</p>
+              <h3 className="text-2xl font-bold text-foreground mb-2">10,000+</h3>
+              <p className="text-muted-foreground">Properties Listed</p>
             </div>
             <div className="text-center">
               <div className="bg-primary/10 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
                 <Users className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">50,000+</h3>
-              <p className="text-gray-600">Happy Customers</p>
+              <h3 className="text-2xl font-bold text-foreground mb-2">50,000+</h3>
+              <p className="text-muted-foreground">Happy Customers</p>
             </div>
             <div className="text-center">
               <div className="bg-primary/10 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
                 <Eye className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">1M+</h3>
-              <p className="text-gray-600">Monthly Views</p>
+              <h3 className="text-2xl font-bold text-foreground mb-2">1M+</h3>
+              <p className="text-muted-foreground">Monthly Views</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">What Our Users Say</h2>
-            <p className="text-lg text-gray-600">Real experiences from property buyers and sellers</p>
+            <h2 className="text-3xl font-bold text-card-foreground mb-4">What Our Users Say</h2>
+            <p className="text-lg text-muted-foreground">Real experiences from property buyers and sellers</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -166,9 +166,9 @@ export default function Landing() {
                         <Star key={i} className="h-4 w-4 fill-current" />
                       ))}
                     </div>
-                    <span className="ml-2 text-sm text-gray-600">{testimonial.rating}.0</span>
+                    <span className="ml-2 text-sm text-muted-foreground">{testimonial.rating}.0</span>
                   </div>
-                  <p className="text-gray-700 mb-4">"{testimonial.comment}"</p>
+                  <p className="text-muted-foreground mb-4">"{testimonial.comment}"</p>
                   <div className="flex items-center">
                     <img 
                       src={testimonial.avatar} 
@@ -176,8 +176,8 @@ export default function Landing() {
                       className="w-10 h-10 rounded-full object-cover"
                     />
                     <div className="ml-3">
-                      <p className="font-semibold text-gray-900">{testimonial.name}</p>
-                      <p className="text-sm text-gray-600">{testimonial.location}</p>
+                      <p className="font-semibold text-foreground">{testimonial.name}</p>
+                      <p className="text-sm text-muted-foreground">{testimonial.location}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -190,7 +190,7 @@ export default function Landing() {
       {/* Call to Action */}
       <section className="py-16 bg-primary">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-white mb-4">Ready to Find Your Dream Property?</h2>
+          <h2 className="text-3xl font-bold text-primary-foreground mb-4">Ready to Find Your Dream Property?</h2>
           <p className="text-xl text-blue-100 mb-8">
             Join thousands of satisfied users who found their perfect home through PropertyHub
           </p>

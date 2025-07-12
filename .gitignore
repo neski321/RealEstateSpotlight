@@ -53,3 +53,4 @@ FIREBASE_SETUP.md
 # Misc
 *.local
 *.log
+server/package-lock.json

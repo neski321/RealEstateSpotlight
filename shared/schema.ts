@@ -33,6 +33,29 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  phone: varchar("phone", { length: 20 }),
+  bio: text("bio"),
+  dateOfBirth: timestamp("date_of_birth"),
+  gender: varchar("gender", { length: 20 }),
+  occupation: varchar("occupation", { length: 100 }),
+  company: varchar("company", { length: 100 }),
+  website: varchar("website", { length: 255 }),
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 100 }),
+  zipCode: varchar("zip_code", { length: 10 }),
+  country: varchar("country", { length: 100 }),
+  timezone: varchar("timezone", { length: 50 }),
+  language: varchar("language", { length: 10 }).default("en"),
+  isVerified: boolean("is_verified").default(false),
+  isAgent: boolean("is_agent").default(false),
+  agentLicense: varchar("agent_license", { length: 100 }),
+  agentCompany: varchar("agent_company", { length: 100 }),
+  agentExperience: integer("agent_experience"), // years of experience
+  preferences: jsonb("preferences"), // JSON object for user preferences
+  notificationSettings: jsonb("notification_settings"), // JSON object for notification settings
+  privacySettings: jsonb("privacy_settings"), // JSON object for privacy settings
+  lastActive: timestamp("last_active"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -100,11 +123,40 @@ export const bookings = pgTable("bookings", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Favorites/Wishlist table
+export const favorites = pgTable("favorites", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  propertyId: integer("property_id").notNull(),
+  notes: text("notes"), // User can add personal notes about the property
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// User search history table
+export const searchHistory = pgTable("search_history", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  searchQuery: text("search_query").notNull(),
+  filters: jsonb("filters"), // JSON object storing search filters
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// User viewing history table
+export const viewingHistory = pgTable("viewing_history", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  propertyId: integer("property_id").notNull(),
+  viewedAt: timestamp("viewed_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   properties: many(properties),
   reviews: many(reviews),
   bookings: many(bookings),
+  favorites: many(favorites),
+  searchHistory: many(searchHistory),
+  viewingHistory: many(viewingHistory),
 }));
 
 export const propertiesRelations = relations(properties, ({ one, many }) => ({
@@ -128,12 +180,29 @@ export const bookingsRelations = relations(bookings, ({ one }) => ({
   user: one(users, { fields: [bookings.userId], references: [users.id] }),
 }));
 
+export const favoritesRelations = relations(favorites, ({ one }) => ({
+  user: one(users, { fields: [favorites.userId], references: [users.id] }),
+  property: one(properties, { fields: [favorites.propertyId], references: [properties.id] }),
+}));
+
+export const searchHistoryRelations = relations(searchHistory, ({ one }) => ({
+  user: one(users, { fields: [searchHistory.userId], references: [users.id] }),
+}));
+
+export const viewingHistoryRelations = relations(viewingHistory, ({ one }) => ({
+  user: one(users, { fields: [viewingHistory.userId], references: [users.id] }),
+  property: one(properties, { fields: [viewingHistory.propertyId], references: [properties.id] }),
+}));
+
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users);
 export const insertPropertySchema = createInsertSchema(properties).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPropertyImageSchema = createInsertSchema(propertyImages).omit({ id: true, createdAt: true });
 export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertBookingSchema = createInsertSchema(bookings).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertFavoriteSchema = createInsertSchema(favorites).omit({ id: true, createdAt: true });
+export const insertSearchHistorySchema = createInsertSchema(searchHistory).omit({ id: true, createdAt: true });
+export const insertViewingHistorySchema = createInsertSchema(viewingHistory).omit({ id: true, viewedAt: true });
 
 // Types
 export type UpsertUser = z.infer<typeof insertUserSchema>;
@@ -146,6 +215,12 @@ export type Review = typeof reviews.$inferSelect;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Booking = typeof bookings.$inferSelect;
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
+export type Favorite = typeof favorites.$inferSelect;
+export type InsertFavorite = z.infer<typeof insertFavoriteSchema>;
+export type SearchHistory = typeof searchHistory.$inferSelect;
+export type InsertSearchHistory = z.infer<typeof insertSearchHistorySchema>;
+export type ViewingHistory = typeof viewingHistory.$inferSelect;
+export type InsertViewingHistory = z.infer<typeof insertViewingHistorySchema>;
 
 // Extended types for queries with relations
 export type PropertyWithDetails = Property & {
@@ -159,4 +234,21 @@ export type PropertyWithStats = Property & {
   averageRating: number;
   reviewCount: number;
   primaryImage?: PropertyImage;
+};
+
+export type UserWithDetails = User & {
+  favorites: Favorite[];
+  searchHistory: SearchHistory[];
+  viewingHistory: ViewingHistory[];
+  properties: Property[];
+  reviews: Review[];
+  bookings: Booking[];
+};
+
+export type FavoriteWithProperty = Favorite & {
+  property: PropertyWithStats;
+};
+
+export type ViewingHistoryWithProperty = ViewingHistory & {
+  property: PropertyWithStats;
 };

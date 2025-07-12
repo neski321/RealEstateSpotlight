@@ -30,7 +30,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       <Navigation />
       
       {/* Hero Section */}
@@ -48,7 +48,7 @@ export default function Home() {
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
               Welcome back, {currentUser?.displayName || currentUser?.email || 'User'}!
             </h1>
-            <p className="text-xl md:text-2xl mb-8 text-gray-200">
+            <p className="text-xl md:text-2xl mb-8 text-muted-foreground">
               Find your next property or manage your listings
             </p>
             
@@ -60,7 +60,7 @@ export default function Home() {
       </section>
 
       {/* Dashboard Stats */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <Card className="bg-gradient-to-r from-primary to-blue-600 text-white">
@@ -203,11 +203,11 @@ export default function Home() {
       </section>
 
       {/* Featured Properties */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-16 bg-muted">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Featured Properties</h2>
-            <p className="text-lg text-gray-600">Discover amazing properties from other users</p>
+            <h2 className="text-3xl font-bold text-foreground mb-4">Featured Properties</h2>
+            <p className="text-lg text-muted-foreground">Discover amazing properties from other users</p>
           </div>
 
           {propertiesLoading ? (

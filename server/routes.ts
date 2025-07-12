@@ -24,6 +24,203 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User profile routes
+  app.get('/api/user/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const user = await storage.getUserWithDetails(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      res.status(500).json({ message: "Failed to fetch user profile" });
+    }
+  });
+
+  app.put('/api/user/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const profileData = req.body;
+      
+      // Remove sensitive fields that shouldn't be updated via this endpoint
+      const { id, email, createdAt, updatedAt, ...updateableFields } = profileData;
+      
+      const updatedUser = await storage.updateUserProfile(userId, updateableFields);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ message: "Failed to update user profile" });
+    }
+  });
+
+  app.put('/api/user/preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const preferences = req.body;
+      
+      const updatedUser = await storage.updateUserPreferences(userId, preferences);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user preferences:", error);
+      res.status(500).json({ message: "Failed to update user preferences" });
+    }
+  });
+
+  app.put('/api/user/notification-settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const settings = req.body;
+      
+      const updatedUser = await storage.updateNotificationSettings(userId, settings);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating notification settings:", error);
+      res.status(500).json({ message: "Failed to update notification settings" });
+    }
+  });
+
+  app.put('/api/user/privacy-settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const settings = req.body;
+      
+      const updatedUser = await storage.updatePrivacySettings(userId, settings);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating privacy settings:", error);
+      res.status(500).json({ message: "Failed to update privacy settings" });
+    }
+  });
+
+  // Favorites routes
+  app.post('/api/favorites/:propertyId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const propertyId = parseInt(req.params.propertyId);
+      const { notes } = req.body;
+      
+      const favorite = await storage.addToFavorites(userId, propertyId, notes);
+      res.status(201).json(favorite);
+    } catch (error) {
+      console.error("Error adding to favorites:", error);
+      res.status(500).json({ message: "Failed to add to favorites" });
+    }
+  });
+
+  app.delete('/api/favorites/:propertyId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const propertyId = parseInt(req.params.propertyId);
+      
+      await storage.removeFromFavorites(userId, propertyId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing from favorites:", error);
+      res.status(500).json({ message: "Failed to remove from favorites" });
+    }
+  });
+
+  app.get('/api/favorites', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const favorites = await storage.getUserFavorites(userId);
+      res.json(favorites);
+    } catch (error) {
+      console.error("Error fetching favorites:", error);
+      res.status(500).json({ message: "Failed to fetch favorites" });
+    }
+  });
+
+  app.get('/api/favorites/:propertyId/check', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const propertyId = parseInt(req.params.propertyId);
+      
+      const isFavorited = await storage.isPropertyFavorited(userId, propertyId);
+      res.json({ isFavorited });
+    } catch (error) {
+      console.error("Error checking favorite status:", error);
+      res.status(500).json({ message: "Failed to check favorite status" });
+    }
+  });
+
+  // Search history routes
+  app.post('/api/search-history', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const { searchQuery, filters } = req.body;
+      
+      const searchRecord = await storage.addSearchHistory(userId, searchQuery, filters);
+      res.status(201).json(searchRecord);
+    } catch (error) {
+      console.error("Error adding search history:", error);
+      res.status(500).json({ message: "Failed to add search history" });
+    }
+  });
+
+  app.get('/api/search-history', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      
+      const searchHistory = await storage.getUserSearchHistory(userId, limit);
+      res.json(searchHistory);
+    } catch (error) {
+      console.error("Error fetching search history:", error);
+      res.status(500).json({ message: "Failed to fetch search history" });
+    }
+  });
+
+  app.delete('/api/search-history', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      
+      await storage.clearSearchHistory(userId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error clearing search history:", error);
+      res.status(500).json({ message: "Failed to clear search history" });
+    }
+  });
+
+  // Viewing history routes
+  app.post('/api/viewing-history/:propertyId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const propertyId = parseInt(req.params.propertyId);
+      
+      const viewingRecord = await storage.addViewingHistory(userId, propertyId);
+      res.status(201).json(viewingRecord);
+    } catch (error) {
+      console.error("Error adding viewing history:", error);
+      res.status(500).json({ message: "Failed to add viewing history" });
+    }
+  });
+
+  app.get('/api/viewing-history', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      
+      const viewingHistory = await storage.getUserViewingHistory(userId, limit);
+      res.json(viewingHistory);
+    } catch (error) {
+      console.error("Error fetching viewing history:", error);
+      res.status(500).json({ message: "Failed to fetch viewing history" });
+    }
+  });
+
+  app.delete('/api/viewing-history', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      
+      await storage.clearViewingHistory(userId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error clearing viewing history:", error);
+      res.status(500).json({ message: "Failed to clear viewing history" });
+    }
+  });
+
   // Property routes
   app.get('/api/properties', async (req, res) => {
     try {

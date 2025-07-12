@@ -80,12 +80,12 @@ export default function Properties() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background text-foreground">
         <Navigation />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Error Loading Properties</h1>
-            <p className="text-gray-600 mb-8">We're having trouble loading the properties. Please try again.</p>
+            <h1 className="text-2xl font-bold text-foreground mb-4">Error Loading Properties</h1>
+            <p className="text-muted-foreground mb-8">We're having trouble loading the properties. Please try again.</p>
             <Button onClick={() => window.location.reload()}>
               Retry
             </Button>
@@ -97,13 +97,13 @@ export default function Properties() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       <Navigation />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Properties</h1>
-          <p className="text-gray-600">Find your perfect property from our extensive collection</p>
+          <h1 className="text-3xl font-bold text-foreground mb-4">Properties</h1>
+          <p className="text-muted-foreground">Find your perfect property from our extensive collection</p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
@@ -118,11 +118,11 @@ export default function Properties() {
           {/* Property Listings */}
           <div className="lg:w-3/4">
             <div className="flex items-center justify-between mb-6">
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 {isLoading ? 'Loading...' : `Showing ${properties.length} properties`}
               </p>
               <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-600">Sort by:</span>
+                <span className="text-sm text-muted-foreground">Sort by:</span>
                 <Select value={sortBy} onValueChange={handleSort}>
                   <SelectTrigger className="w-48">
                     <SelectValue />
@@ -141,20 +141,20 @@ export default function Properties() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[...Array(6)].map((_, i) => (
                   <div key={i} className="animate-pulse">
-                    <div className="bg-gray-200 h-48 rounded-lg mb-4"></div>
+                    <div className="bg-muted h-48 rounded-lg mb-4"></div>
                     <div className="space-y-2">
-                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                      <div className="h-4 bg-muted rounded w-3/4"></div>
+                      <div className="h-4 bg-muted rounded w-1/2"></div>
+                      <div className="h-4 bg-muted rounded w-1/4"></div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : properties.length === 0 ? (
               <div className="text-center py-12">
-                <div className="bg-gray-100 rounded-lg p-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Properties Found</h3>
-                  <p className="text-gray-600 mb-4">
+                <div className="bg-muted rounded-lg p-8">
+                  <h3 className="text-lg font-semibold text-foreground mb-2">No Properties Found</h3>
+                  <p className="text-muted-foreground mb-4">
                     Try adjusting your filters or search criteria to find more properties.
                   </p>
                   <Button onClick={() => handleFiltersChange({})}>
