@@ -14,6 +14,7 @@ import Profile from "@/pages/profile";
 import Favorites from "@/pages/favorites";
 import AuthPage from "@/pages/auth";
 import NotFound from "@/pages/not-found";
+import EditListing from "@/pages/edit-listing";
 
 function Router() {
   const { currentUser, loading } = useAuth();
@@ -41,6 +42,7 @@ function Router() {
           <Route path="/properties" component={Properties} />
           <Route path="/property/:id" component={PropertyDetail} />
           <Route path="/create-listing" component={CreateListing} />
+          <Route path="/edit-listing/:id" component={EditListing} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/profile" component={Profile} />
           <Route path="/favorites" component={Favorites} />

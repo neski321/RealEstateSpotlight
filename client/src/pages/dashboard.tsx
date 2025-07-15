@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -28,11 +29,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { useState } from "react";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Dashboard() {
   const { currentUser, loading } = useAuth();
   const isAuthenticated = !!currentUser;
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [propertyToDelete, setPropertyToDelete] = useState<any>(null);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -48,12 +55,12 @@ export default function Dashboard() {
     }
   }, [isAuthenticated, loading, toast]);
 
-  const { data: userProperties = [], isLoading: propertiesLoading } = useQuery({
+  const { data: userProperties = [], isLoading: propertiesLoading } = useQuery<any[]>({
     queryKey: ['/api/user/properties'],
     enabled: isAuthenticated,
   });
 
-  const { data: userBookings = [], isLoading: bookingsLoading } = useQuery({
+  const { data: userBookings = [], isLoading: bookingsLoading } = useQuery<any[]>({
     queryKey: ['/api/user/bookings'],
     enabled: isAuthenticated,
   });
@@ -72,6 +79,28 @@ export default function Dashboard() {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/properties/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/properties"] });
+      setDeleteDialogOpen(false);
+      setPropertyToDelete(null);
+      toast({
+        title: "Listing deleted",
+        description: "The property listing has been deleted.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete property. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   if (loading) {
     return (
@@ -101,7 +130,7 @@ export default function Dashboard() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {currentUser?.firstName || 'User'}!
+            Welcome back, {currentUser?.displayName ?? 'User'}!
           </h1>
           <p className="text-gray-600">Manage your property listings and track your performance</p>
         </div>
@@ -207,25 +236,29 @@ export default function Dashboard() {
                 {userProperties.map((property: any) => (
                   <div key={property.id} className="relative">
                     <PropertyCard property={property} />
-                    <div className="absolute top-4 left-4">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="bg-white bg-opacity-90">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuItem>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit Listing
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete Listing
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                    {currentUser?.uid === property.ownerId && (
+                      <div className="absolute top-4 left-4">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="bg-white bg-opacity-90">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/edit-listing/${property.id}`}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit Listing
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-600" onClick={() => { setPropertyToDelete(property); setDeleteDialogOpen(true); }}>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Listing
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -385,6 +418,22 @@ export default function Dashboard() {
       </div>
 
       <Footer />
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Listing</DialogTitle>
+          </DialogHeader>
+          <p>Are you sure you want to delete this listing? This action cannot be undone.</p>
+          <DialogFooter>
+            <Button type="button" variant="destructive" onClick={() => propertyToDelete && deleteMutation.mutate(propertyToDelete.id)} disabled={deleteMutation.isPending}>
+              Delete
+            </Button>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Cancel</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

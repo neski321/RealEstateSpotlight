@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -15,10 +15,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Upload, X, Image as ImageIcon } from "lucide-react";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Upload, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { useParams } from "wouter";
 
-export default function CreateListing() {
+export default function EditListing() {
+  const { id } = useParams();
   const [, navigate] = useLocation();
   const { currentUser, loading } = useAuth();
   const isAuthenticated = !!currentUser;
@@ -44,11 +46,17 @@ export default function CreateListing() {
     petFriendly: false,
     furnished: false,
   });
-
   const [images, setImages] = useState<string[]>([]);
+  const [originalImages, setOriginalImages] = useState<string[]>([]); // Track original images
   const [currentStep, setCurrentStep] = useState(1);
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [newImageUrl, setNewImageUrl] = useState("");
+
+  // Fetch property data
+  const { data: property = {}, isLoading: propertyLoading } = useQuery<any>({
+    queryKey: ["/api/properties/" + id],
+    enabled: !!id,
+  });
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -64,43 +72,98 @@ export default function CreateListing() {
     }
   }, [isAuthenticated, loading, toast]);
 
-  const createPropertyMutation = useMutation({
+  useEffect(() => {
+    if (property) {
+      setFormData({
+        title: property.title || '',
+        description: property.description || '',
+        price: property.price || '',
+        location: property.location || '',
+        city: property.city || '',
+        state: property.state || '',
+        zipCode: property.zipCode || '',
+        propertyType: property.propertyType || '',
+        bedrooms: property.bedrooms?.toString() || '',
+        bathrooms: property.bathrooms?.toString() || '',
+        squareFootage: property.squareFootage?.toString() || '',
+        yearBuilt: property.yearBuilt?.toString() || '',
+        parking: !!property.parking,
+        pool: !!property.pool,
+        gym: !!property.gym,
+        petFriendly: !!property.petFriendly,
+        furnished: !!property.furnished,
+      });
+      const imgs = property.images?.map((img: any) => img.imageUrl) || [];
+      setImages(imgs);
+      setOriginalImages(imgs); // Set original images
+    }
+  }, [property]);
+
+  const updatePropertyMutation = useMutation({
     mutationFn: async (propertyData: any) => {
-      const response = await apiRequest('POST', '/api/properties', propertyData);
+      const response = await apiRequest('PUT', `/api/properties/${id}`, propertyData);
       return response.json();
     },
-    onSuccess: async (property) => {
-      // Add images if any
-      let imageUploadError = false;
-      if (images.length > 0) {
-        try {
-          await Promise.all(
-            images.map((img, i) =>
-              apiRequest('POST', `/api/properties/${property.id}/images`, {
-                imageUrl: img,
-                isPrimary: i === 0,
-                altText: `${formData.title} - Image ${i + 1}`,
-              })
-            )
-          );
-        } catch (error) {
-          imageUploadError = true;
-          console.error('Error adding images:', error);
-        }
+    onSuccess: async (updatedProperty) => {
+      // Always fetch latest property images before deleting
+      let latestPropertyImages = [];
+      try {
+        const response = await apiRequest('GET', `/api/properties/${id}`);
+        const latestProperty = await response.json();
+        latestPropertyImages = latestProperty.images || [];
+      } catch (err) {
+        // fallback to local property.images if fetch fails
+        latestPropertyImages = property.images || [];
       }
-
+      const removeImageIds = latestPropertyImages.map((img: any) => img.id);
+      // Remove all old images
+      const removePromises = removeImageIds.map((imageId: number) =>
+        apiRequest('DELETE', `/api/property-images/${imageId}`)
+      );
+      let imageUpdateError = false;
+      try {
+        await Promise.all(removePromises);
+      } catch (err) {
+        imageUpdateError = true;
+      }
+      // Add all current images
+      try {
+        await Promise.all(
+          images.map((img, i) =>
+            apiRequest('POST', `/api/properties/${id}/images`, {
+              imageUrl: img,
+              isPrimary: i === 0,
+              altText: `${formData.title} - Image ${i + 1}`,
+            })
+          )
+        );
+      } catch (err) {
+        imageUpdateError = true;
+      }
+      // Refetch property data to update local state
+      let updatedPropertyWithImages = null;
+      try {
+        const response = await apiRequest('GET', `/api/properties/${id}`);
+        updatedPropertyWithImages = await response.json();
+        const imgs = updatedPropertyWithImages.images?.map((img: any) => img.imageUrl) || [];
+        setImages(imgs);
+        setOriginalImages(imgs);
+      } catch (err) {
+        // If refetch fails, proceed anyway
+      }
       queryClient.invalidateQueries({ queryKey: ['/api/user/properties'] });
       queryClient.invalidateQueries({ queryKey: ['/api/properties'] });
-      
       toast({
-        title: imageUploadError ? "Property listed, but some images failed" : "Property listed successfully",
-        description: imageUploadError
-          ? "Your property was added, but some images may not have uploaded."
-          : "Your property has been added to the marketplace.",
-        variant: imageUploadError ? "destructive" : undefined,
+        title: imageUpdateError ? "Property updated, but some images failed" : "Property updated successfully",
+        description: imageUpdateError
+          ? "Your property was updated, but some images may not have uploaded or been removed."
+          : "Your property listing has been updated.",
+        variant: imageUpdateError ? "destructive" : undefined,
       });
-      
-      navigate(`/property/${property.id}`);
+      // Add a short delay to allow backend propagation
+      setTimeout(() => {
+        navigate(`/property/${id}`);
+      }, 400);
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -116,7 +179,7 @@ export default function CreateListing() {
       }
       toast({
         title: "Error",
-        description: "Failed to create property listing. Please try again.",
+        description: "Failed to update property. Please try again.",
         variant: "destructive",
       });
     },
@@ -145,11 +208,8 @@ export default function CreateListing() {
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (currentStep !== 3) return; // Only submit on last step
-    
-    // Validate required fields
+  const handleUpdateClick = async () => {
+    if (currentStep !== 3) return;
     const requiredFields = ['title', 'price', 'location', 'city', 'state', 'propertyType', 'bedrooms', 'bathrooms'];
     const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
     // Add images as required
@@ -169,7 +229,6 @@ export default function CreateListing() {
       });
       return;
     }
-
     const propertyData = {
       ...formData,
       price: formData.price, // keep as string
@@ -179,18 +238,80 @@ export default function CreateListing() {
       yearBuilt: formData.yearBuilt ? parseInt(formData.yearBuilt) : null,
     };
 
-    createPropertyMutation.mutate(propertyData);
+    // 1. Update property fields
+    updatePropertyMutation.mutate(propertyData, {
+      onSuccess: async (updatedProperty) => {
+        // Always fetch latest property images before deleting
+        let latestPropertyImages = [];
+        try {
+          const response = await apiRequest('GET', `/api/properties/${id}`);
+          const latestProperty = await response.json();
+          latestPropertyImages = latestProperty.images || [];
+        } catch (err) {
+          // fallback to local property.images if fetch fails
+          latestPropertyImages = property.images || [];
+        }
+        const removeImageIds = latestPropertyImages.map((img: any) => img.id);
+        // Remove all old images
+        const removePromises = removeImageIds.map((imageId: number) =>
+          apiRequest('DELETE', `/api/property-images/${imageId}`)
+        );
+        let imageUpdateError = false;
+        try {
+          await Promise.all(removePromises);
+        } catch (err) {
+          imageUpdateError = true;
+        }
+        // Add all current images
+        try {
+          await Promise.all(
+            images.map((img, i) =>
+              apiRequest('POST', `/api/properties/${id}/images`, {
+                imageUrl: img,
+                isPrimary: i === 0,
+                altText: `${formData.title} - Image ${i + 1}`,
+              })
+            )
+          );
+        } catch (err) {
+          imageUpdateError = true;
+        }
+        // Refetch property data to update local state
+        let updatedPropertyWithImages = null;
+        try {
+          const response = await apiRequest('GET', `/api/properties/${id}`);
+          updatedPropertyWithImages = await response.json();
+          const imgs = updatedPropertyWithImages.images?.map((img: any) => img.imageUrl) || [];
+          setImages(imgs);
+          setOriginalImages(imgs);
+        } catch (err) {
+          // If refetch fails, proceed anyway
+        }
+        queryClient.invalidateQueries({ queryKey: ['/api/user/properties'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/properties'] });
+        toast({
+          title: imageUpdateError ? "Property updated, but some images failed" : "Property updated successfully",
+          description: imageUpdateError
+            ? "Your property was updated, but some images may not have uploaded or been removed."
+            : "Your property listing has been updated.",
+          variant: imageUpdateError ? "destructive" : undefined,
+        });
+        // Add a short delay to allow backend propagation
+        setTimeout(() => {
+          navigate(`/property/${id}`);
+        }, 400);
+      },
+    });
   };
 
   const nextStep = () => {
     if (currentStep < 3) setCurrentStep(currentStep + 1);
   };
-
   const prevStep = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  if (loading) {
+  if (loading || propertyLoading) {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <Navigation />
@@ -208,40 +329,13 @@ export default function CreateListing() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navigation />
-      
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create New Listing</h1>
-          <p className="text-gray-600">Add your property to reach thousands of potential buyers</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Edit Listing</h1>
+          <p className="text-gray-600">Update your property details below</p>
         </div>
-
-        {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center">
-            {[1, 2, 3].map((step) => (
-              <div key={step} className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  step <= currentStep ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'
-                }`}>
-                  {step}
-                </div>
-                {step < 3 && (
-                  <div className={`w-16 h-1 mx-2 ${
-                    step < currentStep ? 'bg-primary' : 'bg-gray-200'
-                  }`} />
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-between mt-2 text-sm text-gray-600">
-            <span>Basic Info</span>
-            <span>Details</span>
-            <span>Images</span>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} onKeyDown={e => {
-          if (e.key === 'Enter' && currentStep !== 3) {
+        <form onKeyDown={e => {
+          if (e.key === 'Enter') {
             e.preventDefault();
           }
         }}>
@@ -267,7 +361,6 @@ export default function CreateListing() {
                       required
                     />
                   </div>
-
                   <div>
                     <Label htmlFor="description">Description</Label>
                     <Textarea
@@ -278,7 +371,6 @@ export default function CreateListing() {
                       placeholder="Describe your property's key features and amenities..."
                     />
                   </div>
-
                   <div>
                     <Label htmlFor="price">Price *</Label>
                     <Input
@@ -290,7 +382,6 @@ export default function CreateListing() {
                       required
                     />
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="location">Address *</Label>
@@ -313,7 +404,6 @@ export default function CreateListing() {
                       />
                     </div>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="state">State *</Label>
@@ -337,7 +427,6 @@ export default function CreateListing() {
                   </div>
                 </>
               )}
-
               {/* Step 2: Property Details */}
               {currentStep === 2 && (
                 <>
@@ -355,7 +444,6 @@ export default function CreateListing() {
                       </SelectContent>
                     </Select>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="bedrooms">Bedrooms *</Label>
@@ -381,7 +469,6 @@ export default function CreateListing() {
                       />
                     </div>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="squareFootage">Square Footage</Label>
@@ -407,9 +494,7 @@ export default function CreateListing() {
                       />
                     </div>
                   </div>
-
                   <Separator />
-
                   <div>
                     <Label className="text-base font-medium">Amenities</Label>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-3">
@@ -433,7 +518,6 @@ export default function CreateListing() {
                   </div>
                 </>
               )}
-
               {/* Step 3: Images & Review */}
               {currentStep === 3 && (
                 <>
@@ -477,58 +561,28 @@ export default function CreateListing() {
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
-
                   <Separator />
-
-                  <div>
-                    <Label className="text-base font-medium">Review Your Listing</Label>
-                    <div className="bg-gray-50 p-4 rounded-lg mt-3 space-y-2">
-                      <div><strong>Title:</strong> {formData.title}</div>
-                      <div><strong>Price:</strong> ${parseFloat(formData.price || '0').toLocaleString()}</div>
-                      <div><strong>Location:</strong> {formData.location}, {formData.city}, {formData.state}</div>
-                      <div><strong>Type:</strong> {formData.propertyType}</div>
-                      <div><strong>Bed/Bath:</strong> {formData.bedrooms} bed, {formData.bathrooms} bath</div>
-                      {formData.squareFootage && <div><strong>Size:</strong> {formData.squareFootage} sq ft</div>}
-                      <div><strong>Images:</strong> {images.length} photo{images.length !== 1 ? 's' : ''}</div>
-                    </div>
-                  </div>
                 </>
               )}
             </CardContent>
-          </Card>
-
-          {/* Navigation Buttons */}
-          <div className="flex justify-between mt-8">
-            <div>
-              {currentStep > 1 && (
-                <Button type="button" variant="outline" onClick={prevStep}>
-                  Previous
-                </Button>
-              )}
-            </div>
-            <div className="flex space-x-4">
-              <Button type="button" variant="outline" onClick={() => navigate('/dashboard')}>
-                Cancel
+            <div className="flex justify-between p-6">
+              <Button type="button" variant="outline" onClick={prevStep} disabled={currentStep === 1}>
+                Previous
               </Button>
               {currentStep < 3 ? (
                 <Button type="button" onClick={nextStep}>
                   Next
                 </Button>
               ) : (
-                <Button 
-                  type="submit" 
-                  disabled={createPropertyMutation.isPending}
-                  className="bg-primary hover:bg-primary/90"
-                >
-                  {createPropertyMutation.isPending ? 'Creating...' : 'Create Listing'}
+                <Button type="button" disabled={updatePropertyMutation.isPending} onClick={handleUpdateClick}>
+                  {updatePropertyMutation.isPending ? 'Updating...' : 'Update Listing'}
                 </Button>
               )}
             </div>
-          </div>
+          </Card>
         </form>
       </div>
-
       <Footer />
     </div>
   );
-}
+} 

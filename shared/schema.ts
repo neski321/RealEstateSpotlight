@@ -5,6 +5,7 @@ import {
   timestamp,
   jsonb,
   index,
+  uniqueIndex,
   serial,
   integer,
   decimal,
@@ -147,7 +148,10 @@ export const viewingHistory = pgTable("viewing_history", {
   userId: varchar("user_id").notNull(),
   propertyId: integer("property_id").notNull(),
   viewedAt: timestamp("viewed_at").defaultNow(),
-});
+},
+(table) => [
+  uniqueIndex("unique_user_property").on(table.userId, table.propertyId)
+]);
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
@@ -199,7 +203,15 @@ export const insertUserSchema = createInsertSchema(users);
 export const insertPropertySchema = createInsertSchema(properties).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPropertyImageSchema = createInsertSchema(propertyImages).omit({ id: true, createdAt: true });
 export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertBookingSchema = createInsertSchema(bookings).omit({ id: true, createdAt: true, updatedAt: true });
+// PATCH: allow visitDate to be string or Date
+export const insertBookingSchema = createInsertSchema(bookings)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    visitDate: z.preprocess(
+      (val) => (typeof val === 'string' || val instanceof Date) && val ? new Date(val) : undefined,
+      z.date().optional()
+    ),
+  });
 export const insertFavoriteSchema = createInsertSchema(favorites).omit({ id: true, createdAt: true });
 export const insertSearchHistorySchema = createInsertSchema(searchHistory).omit({ id: true, createdAt: true });
 export const insertViewingHistorySchema = createInsertSchema(viewingHistory).omit({ id: true, viewedAt: true });

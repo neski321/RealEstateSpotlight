@@ -185,12 +185,18 @@ export class DatabaseStorage implements IStorage {
 
   // Favorites operations
   async addToFavorites(userId: string, propertyId: number, notes?: string): Promise<Favorite> {
+    if (!userId || !propertyId || isNaN(propertyId)) {
+      console.error(`[addToFavorites] Invalid userId (${userId}) or propertyId (${propertyId})`);
+      throw new Error(`Invalid userId (${userId}) or propertyId (${propertyId})`);
+    }
+    const values: any = { userId, propertyId };
+    if (notes !== undefined) values.notes = notes;
     const [favorite] = await db
       .insert(favorites)
-      .values({ userId, propertyId, notes })
+      .values(values)
       .onConflictDoUpdate({
         target: [favorites.userId, favorites.propertyId],
-        set: { notes },
+        set: notes !== undefined ? { notes } : {},
       })
       .returning();
     return favorite;

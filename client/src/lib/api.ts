@@ -2,32 +2,27 @@ import { auth } from './firebase';
 
 const API_BASE_URL = '/api';
 
-export async function apiRequest<T = any>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
+export async function apiRequest(
+  method: string,
+  url: string,
+  data?: unknown | undefined,
+): Promise<Response> {
   const token = await auth.currentUser?.getIdToken();
-  
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string>),
-  };
-
+  const headers: Record<string, string> = data ? { "Content-Type": "application/json" } : {};
   if (token) {
-    headers.Authorization = `Bearer ${token}`;
+    headers["Authorization"] = `Bearer ${token}`;
   }
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
+  const fetchOptions: RequestInit = {
+    method,
     headers,
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Network error' }));
-    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    credentials: "include",
+  };
+  if (data !== undefined) {
+    fetchOptions.body = JSON.stringify(data);
   }
-
-  return response.json();
+  const res = await fetch(url, fetchOptions);
+  await throwIfResNotOk(res);
+  return res;
 }
 
 // Convenience methods
