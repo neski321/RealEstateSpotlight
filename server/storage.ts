@@ -143,7 +143,6 @@ export class DatabaseStorage implements IStorage {
         },
       })
       .returning();
-    console.debug(`[DEBUG] User data entered into database: id=${user.id}, email=${user.email}`);
     return user;
   }
 
@@ -185,20 +184,30 @@ export class DatabaseStorage implements IStorage {
 
   // Favorites operations
   async addToFavorites(userId: string, propertyId: number, notes?: string): Promise<Favorite> {
+    console.log('[addToFavorites] userId:', userId, 'propertyId:', propertyId, 'notes:', notes);
     if (!userId || !propertyId || isNaN(propertyId)) {
       console.error(`[addToFavorites] Invalid userId (${userId}) or propertyId (${propertyId})`);
       throw new Error(`Invalid userId (${userId}) or propertyId (${propertyId})`);
     }
     const values: any = { userId, propertyId };
     if (notes !== undefined) values.notes = notes;
-    const [favorite] = await db
-      .insert(favorites)
-      .values(values)
-      .onConflictDoUpdate({
-        target: [favorites.userId, favorites.propertyId],
-        set: notes !== undefined ? { notes } : {},
-      })
-      .returning();
+    let favorite;
+    if (notes !== undefined) {
+      [favorite] = await db
+        .insert(favorites)
+        .values(values)
+        .onConflictDoUpdate({
+          target: [favorites.userId, favorites.propertyId],
+          set: { notes },
+        })
+        .returning();
+    } else {
+      [favorite] = await db
+        .insert(favorites)
+        .values(values)
+        .onConflictDoNothing()
+        .returning();
+    }
     return favorite;
   }
 

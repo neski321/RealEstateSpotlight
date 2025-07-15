@@ -50,6 +50,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
+import type { UserWithDetails, FavoriteWithProperty, ViewingHistoryWithProperty, SearchHistory } from "../../../shared/schema";
 
 export default function Profile() {
   const { currentUser, loading } = useAuth();
@@ -92,25 +93,25 @@ export default function Profile() {
   });
 
   // Fetch user profile data
-  const { data: userProfile, isLoading: profileLoading } = useQuery({
+  const { data: userProfile, isLoading: profileLoading } = useQuery<UserWithDetails | undefined>({
     queryKey: ['/api/user/profile'],
     enabled: isAuthenticated,
   });
 
   // Fetch favorites
-  const { data: favorites = [], isLoading: favoritesLoading } = useQuery({
+  const { data: favorites = [], isLoading: favoritesLoading } = useQuery<FavoriteWithProperty[]>({
     queryKey: ['/api/favorites'],
     enabled: isAuthenticated,
   });
 
   // Fetch search history
-  const { data: searchHistory = [], isLoading: searchHistoryLoading } = useQuery({
+  const { data: searchHistory = [], isLoading: searchHistoryLoading } = useQuery<SearchHistory[]>({
     queryKey: ['/api/search-history'],
     enabled: isAuthenticated,
   });
 
   // Fetch viewing history
-  const { data: viewingHistory = [], isLoading: viewingHistoryLoading } = useQuery({
+  const { data: viewingHistory = [], isLoading: viewingHistoryLoading } = useQuery<ViewingHistoryWithProperty[]>({
     queryKey: ['/api/viewing-history'],
     enabled: isAuthenticated,
   });
@@ -279,29 +280,29 @@ export default function Profile() {
 
   // Initialize form data when profile loads
   useEffect(() => {
-    if (userProfile) {
+    if (userProfile && !isEditing) {
       setProfileForm({
-        firstName: userProfile.firstName || '',
-        lastName: userProfile.lastName || '',
-        phone: userProfile.phone || '',
-        bio: userProfile.bio || '',
-        occupation: userProfile.occupation || '',
-        company: userProfile.company || '',
-        website: userProfile.website || '',
-        address: userProfile.address || '',
-        city: userProfile.city || '',
-        state: userProfile.state || '',
-        zipCode: userProfile.zipCode || '',
-        country: userProfile.country || '',
-        timezone: userProfile.timezone || '',
-        language: userProfile.language || 'en',
+        firstName: userProfile?.firstName || '',
+        lastName: userProfile?.lastName || '',
+        phone: userProfile?.phone || '',
+        bio: userProfile?.bio || '',
+        occupation: userProfile?.occupation || '',
+        company: userProfile?.company || '',
+        website: userProfile?.website || '',
+        address: userProfile?.address || '',
+        city: userProfile?.city || '',
+        state: userProfile?.state || '',
+        zipCode: userProfile?.zipCode || '',
+        country: userProfile?.country || '',
+        timezone: userProfile?.timezone || '',
+        language: userProfile?.language || 'en',
       });
 
-      if (userProfile.preferences) {
+      if (userProfile?.preferences) {
         setPreferences({ ...preferences, ...userProfile.preferences });
       }
     }
-  }, [userProfile]);
+  }, [userProfile, isEditing]);
 
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -365,7 +366,7 @@ export default function Profile() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile Settings</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Profile Settings</h1>
           <p className="text-gray-600">Manage your account, preferences, and activity</p>
         </div>
 
@@ -581,7 +582,7 @@ export default function Profile() {
               <Card>
                 <CardContent className="p-12 text-center">
                   <Heart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No favorites yet</h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">No favorites yet</h3>
                   <p className="text-gray-600 mb-6">
                     Start exploring properties and add them to your favorites to see them here.
                   </p>
@@ -592,7 +593,7 @@ export default function Profile() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {favorites.map((favorite) => (
+                {favorites.map((favorite: FavoriteWithProperty) => (
                   <div key={favorite.id} className="relative">
                     <PropertyCard property={favorite.property} />
                     <div className="absolute top-4 right-4">
@@ -662,7 +663,7 @@ export default function Profile() {
                   </Card>
                 ) : (
                   <div className="space-y-4">
-                    {viewingHistory.map((record) => (
+                    {viewingHistory.map((record: ViewingHistoryWithProperty) => (
                       <Card key={record.id}>
                         <CardContent className="p-4">
                           <div className="flex items-center space-x-4">
@@ -684,7 +685,7 @@ export default function Profile() {
                             </div>
                             <div className="text-right">
                               <p className="text-xs text-gray-500">
-                                Viewed {formatDate(record.viewedAt)}
+                                Viewed {formatDate(record.viewedAt ? record.viewedAt.toString() : '')}
                               </p>
                             </div>
                           </div>
@@ -729,20 +730,25 @@ export default function Profile() {
                   </Card>
                 ) : (
                   <div className="space-y-4">
-                    {searchHistory.map((record) => (
-                      <Card key={record.id}>
+                    {searchHistory.map((record: SearchHistory) => (
+                      <Card key={String(record.id)}>
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h4 className="font-semibold">{record.searchQuery}</h4>
-                              {record.filters && (
+                              <h4 className="font-semibold">{String(record.searchQuery)}</h4>
+                              {typeof record.filters === 'object' && record.filters !== null && (
                                 <p className="text-sm text-gray-600">
                                   Filters: {JSON.stringify(record.filters)}
                                 </p>
                               )}
+                              {typeof record.filters === 'string' && (
+                                <p className="text-sm text-gray-600">
+                                  Filters: {record.filters}
+                                </p>
+                              )}
                             </div>
                             <p className="text-xs text-gray-500">
-                              {formatDate(record.createdAt)}
+                              {formatDate(record.createdAt ? record.createdAt.toString() : '')}
                             </p>
                           </div>
                         </CardContent>

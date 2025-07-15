@@ -151,16 +151,16 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-success to-green-600 text-white">
+          <Card className="bg-gradient-to-r from-green-500 to-green-700 text-white">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-2xl font-bold">
                     {propertiesLoading ? '...' : totalViews}
                   </h3>
-                  <p className="text-green-100">Total Reviews</p>
+                  <p className="text-white font-semibold">Total Views</p>
                 </div>
-                <Eye className="h-8 w-8 text-green-200" />
+                <Eye className="h-8 w-8 text-white opacity-90" />
               </div>
             </CardContent>
           </Card>

@@ -110,6 +110,15 @@ export default function PropertyCard({ property, showFeatured = false }: Propert
       return;
     }
 
+    if (!property.id || isNaN(Number(property.id))) {
+      toast({
+        title: "Invalid property",
+        description: "Cannot add to favorites: property ID is invalid.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (isFavorited) {
       removeFromFavoritesMutation.mutate();
     } else {

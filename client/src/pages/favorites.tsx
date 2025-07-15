@@ -203,8 +203,8 @@ export default function Favorites() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">My Favorites</h1>
-              <p className="text-gray-600">Your saved properties and personal notes</p>
+              <h1 className="text-3xl font-bold text-foreground mb-2">My Favorites</h1>
+              <p className="text-foreground">Your saved properties and personal notes</p>
             </div>
             <Badge variant="secondary" className="text-lg px-4 py-2">
               {favorites.length} {favorites.length === 1 ? 'property' : 'properties'}
@@ -215,12 +215,12 @@ export default function Favorites() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <Filter className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-600">Sort by:</span>
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-foreground">Sort by:</span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="text-sm border border-input bg-background text-foreground rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="date-added">Date Added</option>
                   <option value="price-low">Price: Low to High</option>
@@ -256,7 +256,7 @@ export default function Favorites() {
           <Card>
             <CardContent className="p-12 text-center">
               <Heart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No favorites yet</h3>
+              <h3 className="text-xl font-semibold text-foreground mb-2">No favorites yet</h3>
               <p className="text-gray-600 mb-6">
                 Start exploring properties and add them to your favorites to see them here.
               </p>

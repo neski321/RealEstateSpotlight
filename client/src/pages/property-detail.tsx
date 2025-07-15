@@ -33,6 +33,7 @@ import {
   User
 } from "lucide-react";
 import { useState } from "react";
+import type { PropertyWithDetails } from "../../../shared/schema";
 
 export default function PropertyDetail() {
   const { id } = useParams();
@@ -49,7 +50,7 @@ export default function PropertyDetail() {
     visitDate: '',
   });
 
-  const { data: property, isLoading, error } = useQuery({
+  const { data: property, isLoading, error } = useQuery<PropertyWithDetails | undefined>({
     queryKey: [`/api/properties/${id}`],
     enabled: !!id,
   });
@@ -141,6 +142,15 @@ export default function PropertyDetail() {
       toast({
         title: "Sign in required",
         description: "Please sign in to add properties to favorites.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!id || isNaN(Number(id))) {
+      toast({
+        title: "Invalid property",
+        description: "Cannot add to favorites: property ID is invalid.",
         variant: "destructive",
       });
       return;
@@ -290,8 +300,9 @@ export default function PropertyDetail() {
   if (property.gym) amenities.push('gym');
   if (property.petFriendly) amenities.push('petFriendly');
 
-  const averageRating = property.reviews?.length > 0 
-    ? property.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / property.reviews.length 
+  const reviewCount = property.reviews ? property.reviews.length : 0;
+  const averageRating = property.reviews && property.reviews.length > 0
+    ? property.reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / property.reviews.length
     : 0;
 
   return (
@@ -331,7 +342,7 @@ export default function PropertyDetail() {
                 <span className="mx-2">•</span>
                 <div className="flex items-center">
                   <Star className="h-4 w-4 fill-current text-yellow-500 mr-1" />
-                  <span>{averageRating.toFixed(1)} ({property.reviews?.length} reviews)</span>
+                  <span>{averageRating.toFixed(1)} ({reviewCount} reviews)</span>
                 </div>
               </>
             )}
@@ -415,7 +426,7 @@ export default function PropertyDetail() {
                     <Separator className="my-6" />
                     <div>
                       <h3 className="font-semibold mb-3">Description</h3>
-                      <p className="text-gray-700 whitespace-pre-line">{property.description}</p>
+                      <p className="text-foreground whitespace-pre-line">{property.description}</p>
                     </div>
                   </>
                 )}
@@ -440,12 +451,12 @@ export default function PropertyDetail() {
                   </div>
                   <div>
                     <div className="font-semibold">
-                      {property.owner?.firstName ? 
-                        `${property.owner.firstName} ${property.owner.lastName || ''}`.trim() : 
-                        property.owner?.email || 'Property Owner'
-                      }
+                      {property.owner?.firstName || property.owner?.email || 'Property Owner'}
+                      {property.owner?.lastName ? ` ${property.owner.lastName}` : ''}
                     </div>
-                    <div className="text-sm text-muted-foreground">Property Owner</div>
+                    {property.owner?.email && (
+                      <div className="text-sm text-muted-foreground">{property.owner.email}</div>
+                    )}
                   </div>
                 </div>
 

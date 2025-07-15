@@ -122,7 +122,7 @@ export default function Properties() {
                 {isLoading ? 'Loading...' : `Showing ${properties.length} properties`}
               </p>
               <div className="flex items-center space-x-4">
-                <span className="text-sm text-muted-foreground">Sort by:</span>
+                <span className="text-sm text-foreground">Sort by:</span>
                 <Select value={sortBy} onValueChange={handleSort}>
                   <SelectTrigger className="w-48">
                     <SelectValue />

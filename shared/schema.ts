@@ -125,13 +125,18 @@ export const bookings = pgTable("bookings", {
 });
 
 // Favorites/Wishlist table
-export const favorites = pgTable("favorites", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull(),
-  propertyId: integer("property_id").notNull(),
-  notes: text("notes"), // User can add personal notes about the property
-  createdAt: timestamp("created_at").defaultNow(),
-});
+export const favorites = pgTable("favorites",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id").notNull(),
+    propertyId: integer("property_id").notNull(),
+    notes: text("notes"), // User can add personal notes about the property
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("unique_user_property_favorite").on(table.userId, table.propertyId)
+  ]
+);
 
 // User search history table
 export const searchHistory = pgTable("search_history", {
