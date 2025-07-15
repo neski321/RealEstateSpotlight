@@ -67,7 +67,7 @@ export default function Landing() {
         <div className="relative z-10 h-full flex items-center justify-center">
           <div className="text-center text-white max-w-4xl px-4">
             <h1 className="text-4xl md:text-6xl font-bold mb-6">Find Your Perfect Home</h1>
-            <p className="text-xl md:text-2xl mb-8 text-muted-foreground">
+            <p className="text-xl md:text-2xl mb-8 text-gray-10000" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
               Discover amazing properties from trusted agents and owners
             </p>
             

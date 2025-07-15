@@ -34,6 +34,12 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { PropertyWithDetails } from "../../../shared/schema";
+import { useTheme } from "@/contexts/ThemeContext";
+import "../index.css";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import LoginForm from "@/components/auth/LoginForm";
+import SignupForm from "@/components/auth/SignupForm";
 
 export default function PropertyDetail() {
   const { id } = useParams();
@@ -41,6 +47,7 @@ export default function PropertyDetail() {
   const { currentUser, loading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { theme } = useTheme();
   
   const [bookingForm, setBookingForm] = useState({
     name: '',
@@ -137,6 +144,9 @@ export default function PropertyDetail() {
     }
   }, [property, currentUser, id]);
 
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [authTab, setAuthTab] = useState("login");
+
   const handleFavoriteToggle = () => {
     if (!currentUser) {
       toast({
@@ -144,6 +154,8 @@ export default function PropertyDetail() {
         description: "Please sign in to add properties to favorites.",
         variant: "destructive",
       });
+      setAuthTab("login");
+      setShowAuthDialog(true);
       return;
     }
 
@@ -204,19 +216,7 @@ export default function PropertyDetail() {
     },
   });
 
-  useEffect(() => {
-    if (!loading && !currentUser) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [currentUser, loading, toast]);
+  // Removed useEffect that redirected unauthenticated users to login
 
   const handleBookingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,6 +226,8 @@ export default function PropertyDetail() {
         description: "Please log in to send a booking request.",
         variant: "destructive",
       });
+      setAuthTab("login");
+      setShowAuthDialog(true);
       return;
     }
 
@@ -496,6 +498,7 @@ export default function PropertyDetail() {
                       type="datetime-local"
                       value={bookingForm.visitDate}
                       onChange={(e) => setBookingForm({ ...bookingForm, visitDate: e.target.value })}
+                      className="pr-10"
                     />
                   </div>
                   <div>
@@ -539,6 +542,27 @@ export default function PropertyDetail() {
       </div>
 
       <Footer />
+      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Welcome</DialogTitle>
+          </DialogHeader>
+          <Tabs value={authTab} onValueChange={setAuthTab} className="w-full">
+            <TabsList className="w-full flex mb-4">
+              <TabsTrigger value="login" className="flex-1">Login</TabsTrigger>
+              <TabsTrigger value="signup" className="flex-1">Sign Up</TabsTrigger>
+            </TabsList>
+            <TabsContent value="login">
+              <LoginForm onSwitchToSignup={() => setAuthTab("signup")}
+                onSuccess={() => setShowAuthDialog(false)} />
+            </TabsContent>
+            <TabsContent value="signup">
+              <SignupForm onSwitchToLogin={() => setAuthTab("login")}
+                onSuccess={() => setShowAuthDialog(false)} />
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

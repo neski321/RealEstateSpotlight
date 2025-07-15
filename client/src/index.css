@@ -52,6 +52,22 @@
   --success-foreground: hsl(0, 0%, 100%);
 }
 
+/* Style the native calendar icon for datetime-local input */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: none;
+}
+.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(2);
+}
+input[type="datetime-local"]::-webkit-inner-spin-button {
+  display: none;
+}
+input[type="datetime-local"] {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
 @layer base {
   * {
     @apply border-border;
