@@ -165,12 +165,12 @@ export default function ReviewSection({ propertyId }: ReviewSectionProps) {
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
                       {renderStars(review.rating)}
-                      <span className="text-sm text-gray-500">
+                      <span className="text-muted-foreground text-sm ml-2">
                         {new Date(review.createdAt!).toLocaleDateString()}
                       </span>
                     </div>
                     {review.comment && (
-                      <p className="text-gray-700">{review.comment}</p>
+                      <div className="text-foreground mt-2">{review.comment}</div>
                     )}
                   </div>
                 </div>

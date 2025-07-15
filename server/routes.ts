@@ -24,17 +24,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Debug endpoint to get Firebase UID and email
-  app.get('/api/auth/debug-id', isAuthenticated, async (req: any, res) => {
-    try {
-      res.json({
-        uid: req.user.uid,
-        email: req.user.email,
-      });
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to get user info' });
-    }
-  });
+  // Remove debug endpoint to get Firebase UID and email
 
   // User profile routes
   app.get('/api/user/profile', isAuthenticated, async (req: any, res) => {
@@ -105,6 +95,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Favorites routes
   app.post('/api/favorites/:propertyId', isAuthenticated, async (req: any, res) => {
+    console.log('[ROUTE] POST /api/favorites/:propertyId called', req.user, req.params.propertyId, req.body);
     try {
       const userId = req.user.uid;
       const propertyId = parseInt(req.params.propertyId);

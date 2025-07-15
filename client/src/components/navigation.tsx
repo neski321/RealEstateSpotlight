@@ -140,13 +140,6 @@ export default function Navigation() {
                 </Button>
               </>
             )}
-            {/* TEMP DEBUG BUTTON - REMOVE LATER */}
-            <button
-              onClick={logCurrentUserIdToken}
-              className="px-2 py-1 bg-yellow-300 text-black rounded text-xs ml-2"
-            >
-              Log ID Token
-            </button>
           </div>
         </div>
       </div>
