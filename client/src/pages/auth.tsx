@@ -4,13 +4,23 @@ import LoginForm from '@/components/auth/LoginForm';
 import SignupForm from '@/components/auth/SignupForm';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Home } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useEffect } from 'react';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [, navigate] = useLocation();
+  const { currentUser } = useAuth();
+
+  // Redirect if already logged in (e.g., after signup)
+  useEffect(() => {
+    if (currentUser) {
+      navigate('/dashboard');
+    }
+  }, [currentUser, navigate]);
 
   const handleSuccess = () => {
-    navigate('/');
+    navigate('/dashboard');
   };
 
   return (

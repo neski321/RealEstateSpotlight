@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
+import { api } from "@/lib/api";
 import Navigation from "@/components/navigation";
 import Footer from "@/components/footer";
 import PropertyCard from "@/components/property-card";
@@ -38,6 +39,17 @@ import {
   Clock,
   Star
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 
 export default function Profile() {
   const { currentUser, loading } = useAuth();
@@ -839,6 +851,44 @@ export default function Profile() {
                       />
                     </div>
                   </div>
+                </div>
+                <hr />
+                <div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive">Delete Account</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Account</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete your account? This action cannot be undone and will permanently remove all your data.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction asChild>
+                          <Button
+                            variant="destructive"
+                            onClick={async () => {
+                              try {
+                                await api.delete('/user/account');
+                                await useAuth().currentUser?.delete();
+                                await useAuth().signOutUser();
+                                window.location.href = '/';
+                                // Optionally show a toast here
+                              } catch (err) {
+                                alert('Failed to delete account. Please re-authenticate and try again.');
+                              }
+                            }}
+                          >
+                            Yes, Delete
+                          </Button>
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <p className="text-xs text-gray-500 mt-2">This will permanently delete your account and all associated data.</p>
                 </div>
               </CardContent>
             </Card>

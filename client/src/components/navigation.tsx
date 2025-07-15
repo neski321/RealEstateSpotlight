@@ -18,7 +18,7 @@ import { Sun, Moon } from "lucide-react";
 
 export default function Navigation() {
   const [location] = useLocation();
-  const { currentUser, signOutUser } = useAuth();
+  const { currentUser, signOutUser, logCurrentUserIdToken } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const { theme, toggleTheme } = useTheme();
 
@@ -32,6 +32,7 @@ export default function Navigation() {
   const handleLogout = async () => {
     try {
       await signOutUser();
+      window.location.href = "/";
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -139,6 +140,13 @@ export default function Navigation() {
                 </Button>
               </>
             )}
+            {/* TEMP DEBUG BUTTON - REMOVE LATER */}
+            <button
+              onClick={logCurrentUserIdToken}
+              className="px-2 py-1 bg-yellow-300 text-black rounded text-xs ml-2"
+            >
+              Log ID Token
+            </button>
           </div>
         </div>
       </div>

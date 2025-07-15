@@ -143,6 +143,7 @@ export class DatabaseStorage implements IStorage {
         },
       })
       .returning();
+    console.debug(`[DEBUG] User data entered into database: id=${user.id}, email=${user.email}`);
     return user;
   }
 
@@ -731,6 +732,28 @@ export class DatabaseStorage implements IStorage {
       location: query,
       limit: 20,
     });
+  }
+
+  async deleteUserAccount(userId: string): Promise<void> {
+    // Delete favorites
+    await db.delete(favorites).where(eq(favorites.userId, userId));
+    // Delete reviews
+    await db.delete(reviews).where(eq(reviews.userId, userId));
+    // Delete bookings
+    await db.delete(bookings).where(eq(bookings.userId, userId));
+    // Delete search history
+    await db.delete(searchHistory).where(eq(searchHistory.userId, userId));
+    // Delete viewing history
+    await db.delete(viewingHistory).where(eq(viewingHistory.userId, userId));
+    // Delete property images for user's properties
+    const userProperties = await db.select().from(properties).where(eq(properties.ownerId, userId));
+    for (const property of userProperties) {
+      await db.delete(propertyImages).where(eq(propertyImages.propertyId, property.id));
+    }
+    // Delete properties owned by user
+    await db.delete(properties).where(eq(properties.ownerId, userId));
+    // Delete user
+    await db.delete(users).where(eq(users.id, userId));
   }
 }
 

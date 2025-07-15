@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
@@ -37,7 +37,7 @@ import { useState } from "react";
 export default function PropertyDetail() {
   const { id } = useParams();
   const [, navigate] = useLocation();
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { currentUser, loading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -57,7 +57,7 @@ export default function PropertyDetail() {
   // Add viewing history when property loads
   const addViewingHistoryMutation = useMutation({
     mutationFn: async () => {
-      if (id && isAuthenticated) {
+      if (id && currentUser) {
         await apiRequest('POST', `/api/viewing-history/${id}`, {});
       }
     },
@@ -66,7 +66,7 @@ export default function PropertyDetail() {
   // Check if property is favorited
   const { data: favoriteStatus } = useQuery({
     queryKey: [`/api/favorites/${id}/check`],
-    enabled: isAuthenticated && !!id,
+    enabled: !!currentUser && !!id,
   });
 
   // Add to favorites mutation
@@ -131,13 +131,13 @@ export default function PropertyDetail() {
 
   // Add viewing history when property loads
   useEffect(() => {
-    if (property && isAuthenticated && id) {
+    if (property && currentUser && id) {
       addViewingHistoryMutation.mutate();
     }
-  }, [property, isAuthenticated, id]);
+  }, [property, currentUser, id]);
 
   const handleFavoriteToggle = () => {
-    if (!isAuthenticated) {
+    if (!currentUser) {
       toast({
         title: "Sign in required",
         description: "Please sign in to add properties to favorites.",
@@ -195,7 +195,7 @@ export default function PropertyDetail() {
   });
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (!loading && !currentUser) {
       toast({
         title: "Unauthorized",
         description: "You are logged out. Logging in again...",
@@ -206,11 +206,11 @@ export default function PropertyDetail() {
       }, 500);
       return;
     }
-  }, [isAuthenticated, authLoading, toast]);
+  }, [currentUser, loading, toast]);
 
   const handleBookingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAuthenticated) {
+    if (!currentUser) {
       toast({
         title: "Authentication required",
         description: "Please log in to send a booking request.",
@@ -241,7 +241,7 @@ export default function PropertyDetail() {
     }
   };
 
-  if (authLoading || isLoading) {
+  if (loading || isLoading) {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <Navigation />

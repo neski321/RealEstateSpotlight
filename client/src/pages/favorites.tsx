@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
@@ -26,7 +26,7 @@ import {
 import { Link } from "wouter";
 
 export default function Favorites() {
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const { currentUser, loading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [editingNote, setEditingNote] = useState<{ id: number; notes: string } | null>(null);
@@ -35,7 +35,7 @@ export default function Favorites() {
   // Fetch favorites
   const { data: favorites = [], isLoading: favoritesLoading } = useQuery({
     queryKey: ['/api/favorites'],
-    enabled: isAuthenticated,
+    enabled: !!currentUser,
   }) as { data: any[], isLoading: boolean };
 
   // Remove from favorites mutation
@@ -150,7 +150,7 @@ export default function Favorites() {
     }
   });
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <Navigation />
@@ -175,7 +175,7 @@ export default function Favorites() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!currentUser) {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <Navigation />

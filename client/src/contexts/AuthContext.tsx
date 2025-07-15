@@ -11,6 +11,7 @@ import {
   updateProfile
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { api } from "@/lib/api";
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -21,6 +22,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<any>;
   resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (displayName: string, photoURL?: string) => Promise<void>;
+  logCurrentUserIdToken: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,6 +45,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await updateProfile(result.user, {
           displayName: `${firstName || ''} ${lastName || ''}`.trim()
         });
+        // Force refresh the ID token so the backend sees the new user info
+        await result.user.getIdToken(true);
+        // Now send first and last name to backend to store in DB
+        await api.put('/user/profile', { firstName, lastName });
       }
     });
   }
@@ -69,6 +75,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return updateProfile(currentUser, { displayName, photoURL });
   }
 
+  // Add a helper to log the current user's ID token
+  const logCurrentUserIdToken = async () => {
+    if (auth.currentUser) {
+      const token = await auth.currentUser.getIdToken(true);
+      console.log('Firebase ID Token:', token); // TEMPORARY DEBUG LOG
+    } else {
+      console.log('No user is currently signed in.');
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
@@ -86,7 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOutUser,
     signInWithGoogle,
     resetPassword,
-    updateUserProfile
+    updateUserProfile,
+    logCurrentUserIdToken, // Expose the helper
   };
 
   return (

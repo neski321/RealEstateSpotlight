@@ -24,6 +24,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug endpoint to get Firebase UID and email
+  app.get('/api/auth/debug-id', isAuthenticated, async (req: any, res) => {
+    try {
+      res.json({
+        uid: req.user.uid,
+        email: req.user.email,
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to get user info' });
+    }
+  });
+
   // User profile routes
   app.get('/api/user/profile', isAuthenticated, async (req: any, res) => {
     try {
@@ -459,6 +471,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user bookings:", error);
       res.status(500).json({ message: "Failed to fetch user bookings" });
+    }
+  });
+
+  // Delete user account and all related data
+  app.delete('/api/user/account', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      // Remove user and all related data
+      await storage.deleteUserAccount(userId);
+      res.json({ message: 'User account and related data deleted.' });
+    } catch (error) {
+      console.error('Error deleting user account:', error);
+      res.status(500).json({ message: 'Failed to delete user account.' });
     }
   });
 

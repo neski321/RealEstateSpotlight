@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Mail, Lock, Eye, EyeOff, Chrome } from 'lucide-react';
+import { useLocation } from 'wouter';
 
 interface LoginFormProps {
   onSwitchToSignup: () => void;
@@ -20,6 +21,7 @@ export default function LoginForm({ onSwitchToSignup, onSuccess }: LoginFormProp
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn, signInWithGoogle } = useAuth();
+  const [, navigate] = useLocation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +30,11 @@ export default function LoginForm({ onSwitchToSignup, onSuccess }: LoginFormProp
 
     try {
       await signIn(email, password);
-      onSuccess?.();
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       setError(error.message || 'Failed to sign in');
     } finally {

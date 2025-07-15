@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Star, User } from "lucide-react";
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -15,7 +15,7 @@ interface ReviewSectionProps {
 }
 
 export default function ReviewSection({ propertyId }: ReviewSectionProps) {
-  const { user, isAuthenticated } = useAuth();
+  const { currentUser } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [rating, setRating] = useState(0);
@@ -112,7 +112,7 @@ export default function ReviewSection({ propertyId }: ReviewSectionProps) {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>Reviews ({reviews.length})</span>
-          {isAuthenticated && !showReviewForm && (
+          {currentUser && !showReviewForm && (
             <Button onClick={() => setShowReviewForm(true)}>
               Write a Review
             </Button>

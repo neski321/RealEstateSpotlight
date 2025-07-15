@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
@@ -149,7 +149,7 @@ export default function CreateListing() {
 
     const propertyData = {
       ...formData,
-      price: parseFloat(formData.price),
+      price: formData.price, // keep as string
       bedrooms: parseInt(formData.bedrooms),
       bathrooms: parseInt(formData.bathrooms),
       squareFootage: formData.squareFootage ? parseInt(formData.squareFootage) : null,

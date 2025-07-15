@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
@@ -17,7 +17,7 @@ interface PropertyCardProps {
 }
 
 export default function PropertyCard({ property, showFeatured = false }: PropertyCardProps) {
-  const { isAuthenticated } = useAuth();
+  const { currentUser } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isFavorited, setIsFavorited] = useState(false);
@@ -25,7 +25,7 @@ export default function PropertyCard({ property, showFeatured = false }: Propert
   // Check if property is favorited
   const { data: favoriteStatus } = useQuery({
     queryKey: [`/api/favorites/${property.id}/check`],
-    enabled: isAuthenticated,
+    enabled: currentUser !== null,
   });
 
   // Update local state when favorite status changes
@@ -101,7 +101,7 @@ export default function PropertyCard({ property, showFeatured = false }: Propert
     e.preventDefault();
     e.stopPropagation();
     
-    if (!isAuthenticated) {
+    if (currentUser === null) {
       toast({
         title: "Sign in required",
         description: "Please sign in to add properties to favorites.",
