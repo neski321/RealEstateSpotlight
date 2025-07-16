@@ -8,6 +8,7 @@ import {
   insertReviewSchema,
   insertBookingSchema,
 } from "@shared/schema";
+import { adminAuth } from './firebase';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const server = createServer(app);
@@ -31,7 +32,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.uid;
       const user = await storage.getUserWithDetails(userId);
-      res.json(user);
+      // Ensure roles and currentRole are included in the response
+      res.json({
+        ...user,
+        roles: user?.roles ?? [],
+        currentRole: user?.currentRole ?? null,
+      });
     } catch (error) {
       console.error("Error fetching user profile:", error);
       res.status(500).json({ message: "Failed to fetch user profile" });
@@ -90,6 +96,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating privacy settings:", error);
       res.status(500).json({ message: "Failed to update privacy settings" });
+    }
+  });
+
+  app.put('/api/user/role', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      const { currentRole, roles } = req.body;
+      // Only allow updating roles if provided, otherwise just update currentRole
+      const updateData: any = {};
+      if (currentRole) updateData.currentRole = currentRole;
+      if (roles) updateData.roles = roles;
+      // Update in DB
+      const updatedUser = await storage.updateUserProfile(userId, updateData);
+      // Update Firebase custom claims
+      await adminAuth.setCustomUserClaims(userId, {
+        roles: updatedUser.roles,
+        currentRole: updatedUser.currentRole,
+      });
+      res.json({
+        message: 'Role(s) updated and synced with Firebase.',
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      res.status(500).json({ message: 'Failed to update user role.' });
     }
   });
 

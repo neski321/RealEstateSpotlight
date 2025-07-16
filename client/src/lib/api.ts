@@ -1,4 +1,5 @@
 import { auth } from './firebase';
+import { throwIfResNotOk } from './queryClient';
 
 const API_BASE_URL = '/api';
 
@@ -27,22 +28,14 @@ export async function apiRequest(
 
 // Convenience methods
 export const api = {
-  get: <T = any>(endpoint: string) => apiRequest<T>(endpoint),
+  get: <T = any>(endpoint: string) => apiRequest('GET', endpoint),
   
   post: <T = any>(endpoint: string, data?: any) => 
-    apiRequest<T>(endpoint, {
-      method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
-    }),
+    apiRequest('POST', endpoint, data),
   
   put: <T = any>(endpoint: string, data?: any) => 
-    apiRequest<T>(endpoint, {
-      method: 'PUT',
-      body: data ? JSON.stringify(data) : undefined,
-    }),
+    apiRequest('PUT', endpoint, data),
   
   delete: <T = any>(endpoint: string) => 
-    apiRequest<T>(endpoint, {
-      method: 'DELETE',
-    }),
+    apiRequest('DELETE', endpoint),
 }; 

@@ -59,6 +59,8 @@ export const users = pgTable("users", {
   lastActive: timestamp("last_active"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  roles: jsonb("roles"), // Array of roles, e.g., ["buyer", "seller"]
+  currentRole: varchar("current_role", { length: 20 }), // Current active role
 });
 
 // Properties table
