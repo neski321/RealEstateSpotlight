@@ -122,6 +122,8 @@ export class DatabaseStorage implements IStorage {
 
     return {
       ...user,
+      roles: user.roles,
+      currentRole: user.current_role, // map DB field to camelCase
       favorites: userFavorites.map(f => ({ id: f.id, userId: f.userId, propertyId: f.propertyId, notes: f.notes, createdAt: f.createdAt })),
       searchHistory: userSearchHistory,
       viewingHistory: userViewingHistory.map(v => ({ id: v.id, userId: v.userId, propertyId: v.propertyId, viewedAt: v.viewedAt })),

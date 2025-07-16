@@ -18,9 +18,12 @@ import { Sun, Moon } from "lucide-react";
 
 export default function Navigation() {
   const [location] = useLocation();
-  const { currentUser, signOutUser, logCurrentUserIdToken } = useAuth();
+  const { currentUser, signOutUser, logCurrentUserIdToken, roles, currentRole, switchRole } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const { theme, toggleTheme } = useTheme();
+
+  // Debugging output
+  console.log('roles:', roles, 'currentRole:', currentRole, 'currentUser:', currentUser);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,6 +111,25 @@ export default function Navigation() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
+                    {/* Role Switcher */}
+                    {roles && roles.length > 1 && (
+                      <div className="flex flex-col px-2 py-2">
+                        <span className="text-xs text-muted-foreground mb-1">Switch Role</span>
+                        <div className="flex gap-2">
+                          {roles.map((role) => (
+                            <button
+                              key={role}
+                              onClick={() => role !== currentRole && switchRole(role)}
+                              className={`px-2 py-1 rounded text-xs font-medium border transition-colors
+                                ${role === currentRole ? 'bg-primary text-white border-primary' : 'bg-muted text-foreground border-border hover:bg-accent'}`}
+                              disabled={role === currentRole}
+                            >
+                              {role.charAt(0).toUpperCase() + role.slice(1)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <DropdownMenuItem asChild>
                       <Link href="/dashboard" className="flex items-center">
                         <User className="mr-2 h-4 w-4" />

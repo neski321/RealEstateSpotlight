@@ -16,6 +16,9 @@ import { api } from "@/lib/api";
 interface AuthContextType {
   currentUser: FirebaseUser | null;
   loading: boolean;
+  roles: string[];
+  currentRole: string | null;
+  switchRole: (role: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<any>;
   signUp: (email: string, password: string, firstName?: string, lastName?: string) => Promise<any>;
   signOutUser: () => Promise<void>;
@@ -36,8 +39,11 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  console.log("AuthProvider mounted");
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [roles, setRoles] = useState<string[]>([]);
+  const [currentRole, setCurrentRole] = useState<string | null>(null);
 
   function signUp(email: string, password: string, firstName?: string, lastName?: string) {
     return createUserWithEmailAndPassword(auth, email, password).then(async (result) => {
@@ -86,17 +92,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("[AuthContext] onAuthStateChanged fired. user:", user);
       setCurrentUser(user);
+      if (user) {
+        try {
+          const res = await api.get('/api/user/profile');
+          const data = await res.json();
+          console.log('[AuthContext] /user/profile response:', data);
+          setRoles(data.roles || []);
+          setCurrentRole(data.currentRole || data.current_role || null);
+          console.log('[AuthContext] roles after fetch:', data.roles, 'currentRole:', data.currentRole || data.current_role);
+        } catch (e) {
+          console.error('Error fetching user profile:', e);
+          setRoles([]);
+          setCurrentRole(null);
+        }
+      } else {
+        setRoles([]);
+        setCurrentRole(null);
+      }
       setLoading(false);
     });
-
     return unsubscribe;
   }, []);
+
+  const switchRole = async (role: string) => {
+    if (!roles.includes(role)) return;
+    await api.put('/api/user/role', { currentRole: role });
+    // Refetch user profile to get updated roles/currentRole from backend
+    try {
+      const res = await api.get('/api/user/profile');
+      const data = await res.json();
+      console.log('[AuthContext] /user/profile response after switch:', data);
+      setRoles(data.roles || []);
+      setCurrentRole(data.currentRole || data.current_role || null);
+      console.log('[AuthContext] roles after switch:', data.roles, 'currentRole:', data.currentRole || data.current_role);
+    } catch (e) {
+      console.error('Error refetching user profile after role switch:', e);
+    }
+    // Optionally, refresh ID token if you use custom claims on frontend
+    if (auth.currentUser) await auth.currentUser.getIdToken(true);
+  };
 
   const value = {
     currentUser,
     loading,
+    roles,
+    currentRole,
+    switchRole,
     signIn,
     signUp,
     signOutUser,
