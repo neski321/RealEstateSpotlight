@@ -48,7 +48,7 @@ export default function Home() {
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
               Welcome back, {currentUser?.displayName || currentUser?.email || 'User'}!
             </h1>
-            <p className="text-xl md:text-2xl mb-8 text-muted-foreground">
+            <p className="text-xl md:text-2xl mb-8 text-gray-10000" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
               Find your next property or manage your listings
             </p>
             
@@ -207,7 +207,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-foreground mb-4">Featured Properties</h2>
-            <p className="text-lg text-muted-foreground">Discover amazing properties from other users</p>
+            <p className="text-xl md:text-2xl mb-8 text-gray-10000" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
+              Discover amazing properties from other users</p>
           </div>
 
           {propertiesLoading ? (

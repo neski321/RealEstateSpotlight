@@ -39,18 +39,18 @@ export default function Footer() {
               <li><a href="#" className="hover:text-primary">Market Reports</a></li>
               <li><a href="#" className="hover:text-primary">Investment Tips</a></li>
               <li><a href="#" className="hover:text-primary">Agent Directory</a></li>
-              <li><a href="#" className="hover:text-primary">Mortgage Calculator</a></li>
+              <li><a href="/mortgage-calculator" className="hover:text-primary">Mortgage Calculator</a></li>
             </ul>
           </div>
           
           <div>
             <h3 className="text-lg font-semibold mb-4">Support</h3>
             <ul className="space-y-2 text-muted-foreground">
-              <li><a href="#" className="hover:text-primary">Help Center</a></li>
-              <li><a href="#" className="hover:text-primary">Contact Us</a></li>
-              <li><a href="#" className="hover:text-primary">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-primary">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-primary">Cookie Policy</a></li>
+              <li><a href="/help-center" className="hover:text-primary">Help Center</a></li>
+              <li><a href="/contact" className="hover:text-primary">Contact Us</a></li>
+              <li><a href="/privacy-policy" className="hover:text-primary">Privacy Policy</a></li>
+              <li><a href="/terms-of-service" className="hover:text-primary">Terms of Service</a></li>
+              <li><a href="/cookie-policy" className="hover:text-primary">Cookie Policy</a></li>
             </ul>
           </div>
         </div>

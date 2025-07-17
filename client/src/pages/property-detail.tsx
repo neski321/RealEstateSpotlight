@@ -40,6 +40,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import LoginForm from "@/components/auth/LoginForm";
 import SignupForm from "@/components/auth/SignupForm";
+import MortgageCalculator from "@/components/mortgage-calculator";
 
 export default function PropertyDetail() {
   const { id } = useParams();
@@ -48,6 +49,7 @@ export default function PropertyDetail() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { theme } = useTheme();
+  const [showCalculator, setShowCalculator] = useState(false);
   
   const [bookingForm, setBookingForm] = useState({
     name: '',
@@ -359,9 +361,9 @@ export default function PropertyDetail() {
           <ImageGallery images={property.images || []} title={property.title} />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[2fr,1fr] gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="space-y-8">
             {/* Property Details */}
             <Card>
               <CardHeader>
@@ -440,7 +442,7 @@ export default function PropertyDetail() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-6 max-w-sm w-full mx-auto">
             {/* Contact Agent */}
             <Card>
               <CardHeader>
@@ -539,6 +541,25 @@ export default function PropertyDetail() {
             </Card>
           </div>
         </div>
+
+        {/* Mortgage Calculator Full-Width Section with Toggle */}
+        {property.propertyType !== 'apartment' && (
+          <section className="w-full max-w-4xl mx-auto mt-12 mb-12 flex flex-col items-center">
+            <div className="flex flex-col items-center gap-4 mb-4">
+              {!showCalculator && (
+                <span className="text-center text-sm text-foreground">Would you like to see your estimated mortgage on this property?</span>
+              )}
+              <Button onClick={() => setShowCalculator((prev) => !prev)} className="w-full max-w-xs">
+                {showCalculator ? 'Hide Mortgage Calculator' : 'Show Mortgage Calculator'}
+              </Button>
+            </div>
+            {showCalculator && (
+              <div className="w-full">
+                <MortgageCalculator initialPrice={Number(property.price)} />
+              </div>
+            )}
+          </section>
+        )}
       </div>
 
       <Footer />
