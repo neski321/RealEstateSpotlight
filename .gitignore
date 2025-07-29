@@ -54,3 +54,4 @@ FIREBASE_SETUP.md
 *.local
 *.log
 server/package-lock.json
+migrations/20241207_add_contact_messages.sql

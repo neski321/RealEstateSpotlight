@@ -878,7 +878,7 @@ export default function Profile() {
                             variant="destructive"
                             onClick={async () => {
                               try {
-                                await api.delete('/user/account');
+                                await api.delete('/api/user/account');
                                 await useAuth().currentUser?.delete();
                                 await useAuth().signOutUser();
                                 window.location.href = '/';

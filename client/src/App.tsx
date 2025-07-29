@@ -20,6 +20,8 @@ import ContactUs from "@/pages/contact";
 import CookiePolicy from "@/pages/cookie-policy";
 import TermsOfService from "@/pages/terms-of-service";
 import HelpCenter from "@/pages/help-center";
+import AdminPage from "@/pages/admin";
+import AdminSignup from "@/pages/adminsu";
 
 function Router() {
   const { currentUser, loading } = useAuth();
@@ -45,6 +47,8 @@ function Router() {
           <Route path="/terms-of-service" component={TermsOfService} />
           <Route path="/help-center" component={HelpCenter} />
           <Route path="/mortgage-calculator" component={MortgageCalculatorPage} />
+          <Route path="/admin" component={AdminPage} />
+          <Route path="/adminsu" component={AdminSignup} />
         </>
       ) : (
         <>
@@ -61,6 +65,8 @@ function Router() {
           <Route path="/cookie-policy" component={CookiePolicy} />
           <Route path="/terms-of-service" component={TermsOfService} />
           <Route path="/help-center" component={HelpCenter} />
+          <Route path="/admin" component={AdminPage} />
+          <Route path="/adminsu" component={AdminSignup} />
         </>
       )}
       <Route component={NotFound} />
