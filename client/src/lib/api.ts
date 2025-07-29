@@ -38,4 +38,18 @@ export const api = {
   
   delete: <T = any>(endpoint: string) => 
     apiRequest('DELETE', endpoint),
+};
+
+// Contact message API
+export const contactApi = {
+  submitMessage: async (messageData: {
+    name: string;
+    email: string;
+    subject: string;
+    category?: string;
+    message: string;
+  }) => {
+    const response = await api.post('/api/contact', messageData);
+    return response.json();
+  },
 }; 

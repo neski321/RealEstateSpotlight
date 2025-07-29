@@ -53,9 +53,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         // Force refresh the ID token so the backend sees the new user info
         await result.user.getIdToken(true);
-        // Now send first and last name to backend to store in DB
-        await api.put('/user/profile', { firstName, lastName });
+        // Note: Profile update to backend is now handled by the calling code
+        // to avoid authentication timing issues
       }
+      return result; // Return the result so the calling code can access result.user
     });
   }
 

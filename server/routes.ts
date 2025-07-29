@@ -7,6 +7,7 @@ import {
   insertPropertyImageSchema,
   insertReviewSchema,
   insertBookingSchema,
+  insertContactMessageSchema,
 } from "@shared/schema";
 import { adminAuth } from './firebase';
 
@@ -31,7 +32,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/user/profile', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.uid;
-      const user = await storage.getUserWithDetails(userId);
+      let user = await storage.getUserWithDetails(userId);
+      
+      // If user doesn't exist in our database, create a basic user record
+      if (!user) {
+        console.log(`[user/profile] User ${userId} not found in database, creating basic user record`);
+        const firebaseUser = req.user;
+        
+        // Create basic user with default roles
+        await storage.createUser({
+          id: userId,
+          email: firebaseUser.email || '',
+          firstName: firebaseUser.displayName?.split(' ')[0] || '',
+          lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
+          roles: ['user'], // Default role
+          currentRole: 'user'
+        });
+        
+        console.log(`[user/profile] Created basic user record for ${userId}`);
+        
+        // Get the user with details after creation
+        user = await storage.getUserWithDetails(userId);
+      }
+      
       // Ensure roles and currentRole are included in the response
       res.json({
         ...user,
@@ -493,6 +516,275 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user bookings:", error);
       res.status(500).json({ message: "Failed to fetch user bookings" });
+    }
+  });
+
+  // Contact message routes
+  app.post('/api/contact', async (req, res) => {
+    try {
+      const messageData = insertContactMessageSchema.parse(req.body);
+      const message = await storage.createContactMessage(messageData);
+      res.status(201).json(message);
+    } catch (error) {
+      console.error("Error creating contact message:", error);
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Admin routes
+  app.get('/api/admin/contact-messages', isAuthenticated, async (req: any, res) => {
+    try {
+      // Check if user is admin (you can implement your own admin check logic)
+      const user = await storage.getUser(req.user.uid);
+      if (!user || !(user.roles as string[])?.includes('admin')) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      
+      const messages = await storage.getContactMessages(limit, offset);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching contact messages:", error);
+      res.status(500).json({ message: "Failed to fetch contact messages" });
+    }
+  });
+
+  // Temporary admin route for testing (remove in production)
+  app.get('/api/admin/contact-messages-test', async (req: any, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      
+      const messages = await storage.getContactMessages(limit, offset);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching contact messages:", error);
+      res.status(500).json({ message: "Failed to fetch contact messages" });
+    }
+  });
+
+  // Temporary endpoint to make a user admin (remove in production)
+  app.post('/api/admin/make-admin', async (req: any, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Update user to have admin role
+      const updatedUser = await storage.updateUserProfile(user.id, {
+        roles: ['admin'],
+        currentRole: 'admin'
+      });
+
+      res.json({ 
+        message: "User made admin successfully", 
+        user: updatedUser 
+      });
+    } catch (error) {
+      console.error("Error making user admin:", error);
+      res.status(500).json({ message: "Failed to make user admin" });
+    }
+  });
+
+  // Create admin user directly (for admin signup)
+  app.post('/api/admin/create-admin', isAuthenticated, async (req: any, res) => {
+    try {
+      const { email, firstName, lastName } = req.body;
+      
+      if (!email || !firstName || !lastName) {
+        return res.status(400).json({ message: "Email, firstName, and lastName are required" });
+      }
+
+      // Use the authenticated user's UID
+      const uid = req.user.uid;
+
+      // Check if user already exists by UID first
+      const existingUserById = await storage.getUser(uid);
+      if (existingUserById) {
+        // Update existing user to have admin privileges
+        const updatedUser = await storage.updateUserProfile(uid, {
+          firstName,
+          lastName,
+          roles: ['admin'],
+          currentRole: 'admin'
+        });
+        
+        res.status(200).json({ 
+          message: "Admin privileges granted successfully", 
+          user: updatedUser 
+        });
+        return;
+      }
+
+      // Check if user already exists by email
+      const existingUserByEmail = await storage.getUserByEmail(email);
+      if (existingUserByEmail) {
+        return res.status(409).json({ message: "User already exists" });
+      }
+
+      // Create new user with admin privileges
+      const newUser = await storage.createUser({
+        id: uid, // Use the authenticated user's UID
+        email,
+        firstName,
+        lastName,
+        roles: ['admin'],
+        currentRole: 'admin'
+      });
+
+      res.status(201).json({ 
+        message: "Admin user created successfully", 
+        user: newUser 
+      });
+    } catch (error) {
+      console.error("Error creating admin user:", error);
+      res.status(500).json({ message: "Failed to create admin user" });
+    }
+  });
+
+  // Temporary endpoint to list all users (remove in production)
+  app.get('/api/admin/users', async (req: any, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      res.json(allUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Get all seller accounts (admin only)
+  app.get('/api/admin/sellers', isAuthenticated, async (req: any, res) => {
+    try {
+      // Check if user is admin
+      const user = await storage.getUser(req.user.uid);
+      if (!user || !(user.roles as string[])?.includes('admin')) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const sellers = await storage.getSellerAccounts();
+      res.json(sellers);
+    } catch (error) {
+      console.error("Error fetching seller accounts:", error);
+      res.status(500).json({ message: "Failed to fetch seller accounts" });
+    }
+  });
+
+  // Get total properties count (admin only)
+  app.get('/api/admin/total-properties', isAuthenticated, async (req: any, res) => {
+    try {
+      // Check if user is admin
+      const user = await storage.getUser(req.user.uid);
+      if (!user || !(user.roles as string[])?.includes('admin')) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const total = await storage.getTotalPropertiesCount();
+      res.json({ total });
+    } catch (error) {
+      console.error("Error fetching total properties count:", error);
+      res.status(500).json({ message: "Failed to fetch total properties count" });
+    }
+  });
+
+  app.get('/api/admin/contact-messages/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.uid);
+      if (!user || !(user.roles as string[])?.includes('admin')) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const id = parseInt(req.params.id);
+      const message = await storage.getContactMessage(id);
+      
+      if (!message) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      
+      res.json(message);
+    } catch (error) {
+      console.error("Error fetching contact message:", error);
+      res.status(500).json({ message: "Failed to fetch contact message" });
+    }
+  });
+
+  app.put('/api/admin/contact-messages/:id/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.uid);
+      if (!user || !(user.roles as string[])?.includes('admin')) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      if (!['unread', 'read', 'responded'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const message = await storage.updateContactMessageStatus(id, status);
+      res.json(message);
+    } catch (error) {
+      console.error("Error updating contact message status:", error);
+      res.status(500).json({ message: "Failed to update message status" });
+    }
+  });
+
+  app.post('/api/admin/contact-messages/:id/reply', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.uid);
+      if (!user || !(user.roles as string[])?.includes('admin')) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const id = parseInt(req.params.id);
+      const { reply } = req.body;
+
+      if (!reply || !reply.trim()) {
+        return res.status(400).json({ message: "Reply text is required" });
+      }
+
+      // Get the original message
+      const originalMessage = await storage.getContactMessage(id);
+      if (!originalMessage) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+
+      // Send email reply
+      await storage.sendContactMessageReply(id, originalMessage, reply);
+
+      // Update message status to responded
+      await storage.updateContactMessageStatus(id, 'responded');
+
+      res.json({ message: "Reply sent successfully" });
+    } catch (error) {
+      console.error("Error sending reply:", error);
+      res.status(500).json({ message: "Failed to send reply" });
+    }
+  });
+
+  app.delete('/api/admin/contact-messages/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.uid);
+      if (!user || !(user.roles as string[])?.includes('admin')) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const id = parseInt(req.params.id);
+      await storage.deleteContactMessage(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting contact message:", error);
+      res.status(500).json({ message: "Failed to delete message" });
     }
   });
 

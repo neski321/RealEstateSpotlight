@@ -7,6 +7,7 @@ import {
   favorites,
   searchHistory,
   viewingHistory,
+  contactMessages,
   type User,
   type UpsertUser,
   type Property,
@@ -23,6 +24,8 @@ import {
   type InsertSearchHistory,
   type ViewingHistory,
   type InsertViewingHistory,
+  type ContactMessage,
+  type InsertContactMessage,
   type PropertyWithDetails,
   type PropertyWithStats,
   type UserWithDetails,
@@ -35,8 +38,11 @@ import { eq, desc, asc, and, or, ilike, avg, count, sql } from "drizzle-orm";
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
   getUserWithDetails(id: string): Promise<UserWithDetails | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  createUser(user: UpsertUser): Promise<User>;
   updateUserProfile(id: string, profileData: Partial<UpsertUser>): Promise<User>;
   updateUserPreferences(id: string, preferences: any): Promise<User>;
   updateNotificationSettings(id: string, settings: any): Promise<User>;
@@ -95,6 +101,18 @@ export interface IStorage {
   updateBookingStatus(id: number, status: string): Promise<Booking>;
   deleteBooking(id: number): Promise<void>;
   
+  // Contact message operations
+  createContactMessage(message: InsertContactMessage): Promise<ContactMessage>;
+  getContactMessages(limit?: number, offset?: number): Promise<ContactMessage[]>;
+  getContactMessage(id: number): Promise<ContactMessage | undefined>;
+  updateContactMessageStatus(id: number, status: string): Promise<ContactMessage>;
+  deleteContactMessage(id: number): Promise<void>;
+  
+  // Admin operations
+  getSellerAccounts(): Promise<(User & { propertyCount: number })[]>;
+  getTotalPropertiesCount(): Promise<number>;
+  sendContactMessageReply(messageId: number, originalMessage: ContactMessage, reply: string): Promise<void>;
+  
   // Search operations
   searchProperties(query: string): Promise<PropertyWithStats[]>;
 }
@@ -104,6 +122,15 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
   }
 
   async getUserWithDetails(id: string): Promise<UserWithDetails | undefined> {
@@ -123,7 +150,7 @@ export class DatabaseStorage implements IStorage {
     return {
       ...user,
       roles: user.roles,
-      currentRole: user.current_role, // map DB field to camelCase
+      currentRole: user.currentRole, // map DB field to camelCase
       favorites: userFavorites.map(f => ({ id: f.id, userId: f.userId, propertyId: f.propertyId, notes: f.notes, createdAt: f.createdAt })),
       searchHistory: userSearchHistory,
       viewingHistory: userViewingHistory.map(v => ({ id: v.id, userId: v.userId, propertyId: v.propertyId, viewedAt: v.viewedAt })),
@@ -145,6 +172,20 @@ export class DatabaseStorage implements IStorage {
         },
       })
       .returning();
+    return user;
+  }
+
+  async createUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoNothing()
+      .returning();
+    
+    if (!user) {
+      throw new Error('User already exists');
+    }
+    
     return user;
   }
 
@@ -509,7 +550,7 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
-    let query = db
+    const result = await db
       .select({
         id: properties.id,
         title: properties.title,
@@ -541,17 +582,9 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(reviews, eq(properties.id, reviews.propertyId))
       .where(and(...conditions))
       .groupBy(properties.id)
-      .orderBy(desc(properties.createdAt));
-
-    if (filters?.limit) {
-      query = query.limit(filters.limit);
-    }
-    
-    if (filters?.offset) {
-      query = query.offset(filters.offset);
-    }
-
-    const result = await query;
+      .orderBy(desc(properties.createdAt))
+      .limit(filters?.limit || 20)
+      .offset(filters?.offset || 0);
     
     // Get images for each property
     const propertiesWithImages = await Promise.all(
@@ -741,6 +774,104 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBooking(id: number): Promise<void> {
     await db.delete(bookings).where(eq(bookings.id, id));
+  }
+
+  // Contact message operations
+  async createContactMessage(message: InsertContactMessage): Promise<ContactMessage> {
+    const [newMessage] = await db.insert(contactMessages).values(message).returning();
+    return newMessage;
+  }
+
+  async getContactMessages(limit: number = 20, offset: number = 0): Promise<ContactMessage[]> {
+    return await db
+      .select()
+      .from(contactMessages)
+      .orderBy(desc(contactMessages.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getContactMessage(id: number): Promise<ContactMessage | undefined> {
+    const [message] = await db
+      .select()
+      .from(contactMessages)
+      .where(eq(contactMessages.id, id));
+    return message;
+  }
+
+  async updateContactMessageStatus(id: number, status: string): Promise<ContactMessage> {
+    const [updatedMessage] = await db
+      .update(contactMessages)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(contactMessages.id, id))
+      .returning();
+    return updatedMessage;
+  }
+
+  async deleteContactMessage(id: number): Promise<void> {
+    await db.delete(contactMessages).where(eq(contactMessages.id, id));
+  }
+
+  // Admin operations
+  async getSellerAccounts(): Promise<(User & { propertyCount: number })[]> {
+    // Get all users who have 'seller' role
+    const allUsers = await db.select().from(users);
+    const sellers = allUsers.filter(user => 
+      (user.roles as string[])?.includes('seller')
+    );
+    
+    // Get property count for each seller
+    const sellersWithPropertyCount = await Promise.all(
+      sellers.map(async (seller) => {
+        const propertyCount = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(properties)
+          .where(eq(properties.ownerId, seller.id));
+        
+        return {
+          ...seller,
+          propertyCount: propertyCount[0]?.count || 0
+        };
+      })
+    );
+    
+    return sellersWithPropertyCount;
+  }
+
+  async getTotalPropertiesCount(): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(properties);
+    
+    return result[0]?.count || 0;
+  }
+
+  async sendContactMessageReply(messageId: number, originalMessage: ContactMessage, reply: string): Promise<void> {
+    // For now, we'll log the email details since we don't have email service configured
+    // In a production environment, you would integrate with a service like SendGrid, AWS SES, etc.
+    
+    console.log('=== EMAIL REPLY ===');
+    console.log(`To: ${originalMessage.email}`);
+    console.log(`Subject: Re: ${originalMessage.subject}`);
+    console.log(`From: admin@realestatespotlight.com`);
+    console.log(`Reply: ${reply}`);
+    console.log(`Original Message: ${originalMessage.message}`);
+    console.log('==================');
+    
+    // TODO: Integrate with email service (SendGrid, AWS SES, etc.)
+    // Example with SendGrid:
+    // const sgMail = require('@sendgrid/mail');
+    // sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    // 
+    // const msg = {
+    //   to: originalMessage.email,
+    //   from: 'admin@realestatespotlight.com',
+    //   subject: `Re: ${originalMessage.subject}`,
+    //   text: reply,
+    //   html: `<p>${reply}</p><br><hr><p><strong>Original Message:</strong></p><p>${originalMessage.message}</p>`
+    // };
+    // 
+    // await sgMail.send(msg);
   }
 
   // Search operations

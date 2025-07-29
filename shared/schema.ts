@@ -160,6 +160,19 @@ export const viewingHistory = pgTable("viewing_history", {
   uniqueIndex("unique_user_property").on(table.userId, table.propertyId)
 ]);
 
+// Contact messages table
+export const contactMessages = pgTable("contact_messages", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull(),
+  subject: varchar("subject", { length: 255 }).notNull(),
+  category: varchar("category", { length: 50 }),
+  message: text("message").notNull(),
+  status: varchar("status", { length: 20 }).default("unread"), // unread, read, responded
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   properties: many(properties),
@@ -222,6 +235,7 @@ export const insertBookingSchema = createInsertSchema(bookings)
 export const insertFavoriteSchema = createInsertSchema(favorites).omit({ id: true, createdAt: true });
 export const insertSearchHistorySchema = createInsertSchema(searchHistory).omit({ id: true, createdAt: true });
 export const insertViewingHistorySchema = createInsertSchema(viewingHistory).omit({ id: true, viewedAt: true });
+export const insertContactMessageSchema = createInsertSchema(contactMessages).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Types
 export type UpsertUser = z.infer<typeof insertUserSchema>;
@@ -240,6 +254,8 @@ export type SearchHistory = typeof searchHistory.$inferSelect;
 export type InsertSearchHistory = z.infer<typeof insertSearchHistorySchema>;
 export type ViewingHistory = typeof viewingHistory.$inferSelect;
 export type InsertViewingHistory = z.infer<typeof insertViewingHistorySchema>;
+export type ContactMessage = typeof contactMessages.$inferSelect;
+export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
 
 // Extended types for queries with relations
 export type PropertyWithDetails = Property & {

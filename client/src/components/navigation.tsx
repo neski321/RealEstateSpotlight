@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Home, Search, Plus, User, Settings, LogOut, Heart } from "lucide-react";
+import { Home, Search, Plus, User, Settings, LogOut, Heart, Shield } from "lucide-react";
 import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -142,6 +142,14 @@ export default function Navigation() {
                         Profile
                       </Link>
                     </DropdownMenuItem>
+                    {roles.includes('admin') && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin" className="flex items-center">
+                          <Shield className="mr-2 h-4 w-4" />
+                          Admin Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} className="flex items-center">
                       <LogOut className="mr-2 h-4 w-4" />
