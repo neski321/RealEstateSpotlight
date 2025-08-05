@@ -46,6 +46,7 @@ function Router() {
           <Route path="/cookie-policy" component={CookiePolicy} />
           <Route path="/terms-of-service" component={TermsOfService} />
           <Route path="/help-center" component={HelpCenter} />
+          <Route path="/help-center/:articleId" component={HelpCenter} />
           <Route path="/mortgage-calculator" component={MortgageCalculatorPage} />
           <Route path="/admin" component={AdminPage} />
           <Route path="/adminsu" component={AdminSignup} />
@@ -65,6 +66,7 @@ function Router() {
           <Route path="/cookie-policy" component={CookiePolicy} />
           <Route path="/terms-of-service" component={TermsOfService} />
           <Route path="/help-center" component={HelpCenter} />
+          <Route path="/help-center/:articleId" component={HelpCenter} />
           <Route path="/admin" component={AdminPage} />
           <Route path="/adminsu" component={AdminSignup} />
         </>
