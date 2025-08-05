@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 import LoginForm from '@/components/auth/LoginForm';
 import SignupForm from '@/components/auth/SignupForm';
+import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Home } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot-password'>('login');
   const [, navigate] = useLocation();
   const { currentUser } = useAuth();
 
@@ -40,15 +41,22 @@ export default function AuthPage() {
         </div>
 
         {/* Auth Form */}
-        {isLogin ? (
+        {authMode === 'login' && (
           <LoginForm
-            onSwitchToSignup={() => setIsLogin(false)}
+            onSwitchToSignup={() => setAuthMode('signup')}
+            onSwitchToForgotPassword={() => setAuthMode('forgot-password')}
             onSuccess={handleSuccess}
           />
-        ) : (
+        )}
+        {authMode === 'signup' && (
           <SignupForm
-            onSwitchToLogin={() => setIsLogin(true)}
+            onSwitchToLogin={() => setAuthMode('login')}
             onSuccess={handleSuccess}
+          />
+        )}
+        {authMode === 'forgot-password' && (
+          <ForgotPasswordForm
+            onBackToLogin={() => setAuthMode('login')}
           />
         )}
 
