@@ -40,6 +40,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import LoginForm from "@/components/auth/LoginForm";
 import SignupForm from "@/components/auth/SignupForm";
+import ForgotPasswordForm from "@/components/auth/ForgotPasswordForm";
 import MortgageCalculator from "@/components/mortgage-calculator";
 
 export default function PropertyDetail() {
@@ -572,14 +573,23 @@ export default function PropertyDetail() {
             <TabsList className="w-full flex mb-4">
               <TabsTrigger value="login" className="flex-1">Login</TabsTrigger>
               <TabsTrigger value="signup" className="flex-1">Sign Up</TabsTrigger>
+              <TabsTrigger value="forgot-password" className="flex-1">Reset Password</TabsTrigger>
             </TabsList>
             <TabsContent value="login">
-              <LoginForm onSwitchToSignup={() => setAuthTab("signup")}
-                onSuccess={() => setShowAuthDialog(false)} />
+              <LoginForm 
+                onSwitchToSignup={() => setAuthTab("signup")}
+                onSwitchToForgotPassword={() => setAuthTab("forgot-password")}
+                onSuccess={() => setShowAuthDialog(false)} 
+              />
             </TabsContent>
             <TabsContent value="signup">
               <SignupForm onSwitchToLogin={() => setAuthTab("login")}
                 onSuccess={() => setShowAuthDialog(false)} />
+            </TabsContent>
+            <TabsContent value="forgot-password">
+              <ForgotPasswordForm 
+                onBackToLogin={() => setAuthTab("login")}
+              />
             </TabsContent>
           </Tabs>
         </DialogContent>

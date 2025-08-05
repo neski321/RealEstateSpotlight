@@ -11,10 +11,11 @@ import { useLocation } from 'wouter';
 
 interface LoginFormProps {
   onSwitchToSignup: () => void;
+  onSwitchToForgotPassword: () => void;
   onSuccess?: () => void;
 }
 
-export default function LoginForm({ onSwitchToSignup, onSuccess }: LoginFormProps) {
+export default function LoginForm({ onSwitchToSignup, onSwitchToForgotPassword, onSuccess }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -107,6 +108,15 @@ export default function LoginForm({ onSwitchToSignup, onSuccess }: LoginFormProp
                 className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={onSwitchToForgotPassword}
+                className="text-sm text-primary hover:underline"
+              >
+                Forgot password?
               </button>
             </div>
           </div>
