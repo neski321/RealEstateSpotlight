@@ -99,3 +99,36 @@ input[type="datetime-local"] {
     --tw-ring-color: hsl(var(--success));
   }
 }
+
+/* Help center article styling for better theme support */
+.prose h2 {
+  @apply text-foreground font-semibold;
+}
+
+.prose h3 {
+  @apply text-foreground font-medium;
+}
+
+.prose p {
+  @apply text-foreground;
+}
+
+.prose ul {
+  @apply text-foreground;
+}
+
+.prose ol {
+  @apply text-foreground;
+}
+
+.prose li {
+  @apply text-foreground;
+}
+
+.prose strong {
+  @apply text-foreground font-semibold;
+}
+
+.dark .prose {
+  @apply prose-invert;
+}
