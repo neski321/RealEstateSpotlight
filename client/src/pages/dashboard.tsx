@@ -129,10 +129,10 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-foreground mb-2">
             Welcome back, {currentUser?.displayName ?? 'User'}!
           </h1>
-          <p className="text-gray-600">Manage your property listings and track your performance</p>
+          <p className="text-muted-foreground">Manage your property listings and track your performance</p>
         </div>
 
         {/* Stats Cards */}
@@ -240,7 +240,7 @@ export default function Dashboard() {
                       <div className="absolute top-4 left-4">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="bg-white bg-opacity-90">
+                            <Button variant="ghost" size="sm" className="bg-white/80 text-black hover:bg-white/90 dark:bg-black/80 dark:text-white dark:hover:bg-black/90">
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>

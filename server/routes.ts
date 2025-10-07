@@ -10,9 +10,28 @@ import {
   insertContactMessageSchema,
 } from "@shared/schema";
 import { adminAuth } from './firebase';
+import multer from "multer";
+import { ImageService } from "./cloudflare-r2";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const server = createServer(app);
+
+  // Configure multer for file uploads
+  const maxFileSize = parseInt(process.env.MAX_IMAGE_SIZE_MB || '10') * 1024 * 1024; // Default 10MB
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: maxFileSize,
+    },
+    fileFilter: (req, file, cb) => {
+      // Accept only image files
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed'));
+      }
+    },
+  });
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -454,6 +473,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting property image:", error);
       res.status(500).json({ message: "Failed to delete property image" });
+    }
+  });
+
+  // Image upload endpoints
+  app.post("/api/admin/upload/image", upload.single('image'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+
+      const { folder = 'properties' } = req.body;
+      const result = await ImageService.uploadFile(
+        req.file.buffer,
+        req.file.mimetype,
+        folder
+      );
+
+      res.json({
+        url: result.url,
+        key: result.key,
+        message: "Image uploaded successfully"
+      });
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      res.status(500).json({ message: "Failed to upload image" });
+    }
+  });
+
+  // Image delete endpoint
+  app.delete("/api/admin/upload/image", async (req, res) => {
+    try {
+      const { key } = req.body;
+      
+      if (!key) {
+        return res.status(400).json({ message: "Image key is required" });
+      }
+
+      const deleted = await ImageService.deleteFile(key);
+      
+      if (deleted) {
+        res.json({ message: "Image deleted successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to delete image" });
+      }
+    } catch (error) {
+      console.error("Error deleting image:", error);
+      res.status(500).json({ message: "Failed to delete image" });
     }
   });
 
