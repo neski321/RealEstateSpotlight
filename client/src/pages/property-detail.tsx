@@ -30,18 +30,21 @@ import {
   Phone,
   Mail,
   Star,
-  User
+  User,
+  MessageCircle,
+  Calculator
 } from "lucide-react";
 import { useState } from "react";
 import type { PropertyWithDetails } from "../../../shared/schema";
 import { useTheme } from "@/contexts/ThemeContext";
 import "../index.css";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import MortgageCalculatorModal from "@/components/mortgage-calculator-modal";
+import MessagesModal from "@/components/messages-modal";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import LoginForm from "@/components/auth/LoginForm";
 import SignupForm from "@/components/auth/SignupForm";
 import ForgotPasswordForm from "@/components/auth/ForgotPasswordForm";
-import MortgageCalculator from "@/components/mortgage-calculator";
 
 export default function PropertyDetail() {
   const { id } = useParams();
@@ -50,7 +53,6 @@ export default function PropertyDetail() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { theme } = useTheme();
-  const [showCalculator, setShowCalculator] = useState(false);
   
   const [bookingForm, setBookingForm] = useState({
     name: '',
@@ -147,8 +149,41 @@ export default function PropertyDetail() {
     }
   }, [property, currentUser, id]);
 
+  // Contact seller mutation
+  const contactSellerMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest('POST', '/api/conversations', { propertyId: Number(id) });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Conversation started",
+        description: "You can now message the seller about this property.",
+      });
+      // Open messages modal
+      setShowMessagesModal(true);
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Sign in required",
+          description: "Please sign in to contact the seller.",
+          variant: "destructive",
+        });
+        setShowAuthDialog(true);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to start conversation. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [authTab, setAuthTab] = useState("login");
+  const [showMortgageCalculator, setShowMortgageCalculator] = useState(false);
+  const [showMessagesModal, setShowMessagesModal] = useState(false);
 
   const handleFavoriteToggle = () => {
     if (!currentUser) {
@@ -335,6 +370,17 @@ export default function PropertyDetail() {
                 <Share2 className="h-4 w-4 mr-2" />
                 Share
               </Button>
+              {currentUser?.uid !== property?.ownerId && (
+                <Button 
+                  variant="default" 
+                  size="sm"
+                  onClick={() => contactSellerMutation.mutate()}
+                  disabled={contactSellerMutation.isPending}
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Contact Seller
+                </Button>
+              )}
             </div>
           </div>
           
@@ -522,6 +568,24 @@ export default function PropertyDetail() {
                     {bookingMutation.isPending ? 'Sending...' : 'Send Inquiry'}
                   </Button>
                 </form>
+                
+                {/* Direct Message Option */}
+                {currentUser?.uid !== property?.ownerId && (
+                  <div className="mt-4 pt-4 border-t">
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Or start a direct conversation with the seller
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start"
+                      onClick={() => contactSellerMutation.mutate()}
+                      disabled={contactSellerMutation.isPending}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      {contactSellerMutation.isPending ? 'Starting...' : 'Direct Message'}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -543,22 +607,22 @@ export default function PropertyDetail() {
           </div>
         </div>
 
-        {/* Mortgage Calculator Full-Width Section with Toggle */}
+        {/* Mortgage Calculator Button */}
         {property.propertyType !== 'apartment' && (
           <section className="w-full max-w-4xl mx-auto mt-12 mb-12 flex flex-col items-center">
             <div className="flex flex-col items-center gap-4 mb-4">
-              {!showCalculator && (
-                <span className="text-center text-sm text-foreground">Would you like to see your estimated mortgage on this property?</span>
-              )}
-              <Button onClick={() => setShowCalculator((prev) => !prev)} className="w-full max-w-xs">
-                {showCalculator ? 'Hide Mortgage Calculator' : 'Show Mortgage Calculator'}
+              <span className="text-center text-sm text-muted-foreground">
+                Calculate your estimated mortgage payment for this property
+              </span>
+              <Button 
+                onClick={() => setShowMortgageCalculator(true)} 
+                className="w-full max-w-xs"
+                size="lg"
+              >
+                <Calculator className="h-4 w-4 mr-2" />
+                Calculate Mortgage
               </Button>
             </div>
-            {showCalculator && (
-              <div className="w-full">
-                <MortgageCalculator initialPrice={Number(property.price)} />
-              </div>
-            )}
           </section>
         )}
       </div>
@@ -594,6 +658,30 @@ export default function PropertyDetail() {
           </Tabs>
         </DialogContent>
       </Dialog>
+
+      {/* Mortgage Calculator Modal */}
+      <MortgageCalculatorModal
+        isOpen={showMortgageCalculator}
+        onClose={() => setShowMortgageCalculator(false)}
+        property={property ? {
+          id: property.id,
+          title: property.title,
+          price: property.price,
+          location: property.location,
+          propertyType: property.propertyType,
+          bedrooms: property.bedrooms,
+          bathrooms: property.bathrooms,
+          squareFootage: property.squareFootage || undefined,
+          yearBuilt: property.yearBuilt || undefined,
+          lotSize: (property as any).lotSize || undefined,
+        } : undefined}
+      />
+
+      {/* Messages Modal */}
+      <MessagesModal
+        isOpen={showMessagesModal}
+        onClose={() => setShowMessagesModal(false)}
+      />
     </div>
   );
 }

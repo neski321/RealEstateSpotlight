@@ -287,3 +287,48 @@ export type FavoriteWithProperty = Favorite & {
 export type ViewingHistoryWithProperty = ViewingHistory & {
   property: PropertyWithStats;
 };
+
+// Conversations table
+export const conversations = pgTable("conversations", {
+  id: varchar("id", { length: 36 }).primaryKey(), // UUID
+  propertyId: integer("property_id").notNull(),
+  buyerId: varchar("buyer_id").notNull(),
+  sellerId: varchar("seller_id").notNull(),
+  lastMessageId: integer("last_message_id"),
+  lastMessageAt: timestamp("last_message_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Messages table
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  conversationId: varchar("conversation_id", { length: 36 }).notNull(),
+  senderId: varchar("sender_id").notNull(),
+  receiverId: varchar("receiver_id").notNull(),
+  propertyId: integer("property_id").notNull(),
+  messageText: text("message_text").notNull(),
+  messageType: varchar("message_type", { length: 50 }).default("text"),
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Type exports for messaging
+export type Conversation = typeof conversations.$inferSelect;
+export type NewConversation = typeof conversations.$inferInsert;
+export type Message = typeof messages.$inferSelect;
+export type NewMessage = typeof messages.$inferInsert;
+
+export type ConversationWithDetails = Conversation & {
+  property: Property;
+  buyer: User;
+  seller: User;
+  lastMessage?: Message;
+  unreadCount: number;
+};
+
+export type MessageWithSender = Message & {
+  sender: User;
+  receiver: User;
+};

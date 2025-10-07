@@ -7,7 +7,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, Bed, Bath, Maximize, Camera, Heart } from "lucide-react";
+import { Star, Bed, Bath, Maximize, Camera, Heart, MessageCircle, Calculator } from "lucide-react";
 import { Link } from "wouter";
 import type { PropertyWithStats } from "@shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,6 +15,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import LoginForm from "@/components/auth/LoginForm";
 import SignupForm from "@/components/auth/SignupForm";
 import ForgotPasswordForm from "@/components/auth/ForgotPasswordForm";
+import MortgageCalculatorModal from "@/components/mortgage-calculator-modal";
+import MessagesModal from "@/components/messages-modal";
 
 interface PropertyCardProps {
   property: PropertyWithStats;
@@ -28,6 +30,8 @@ export default function PropertyCard({ property, showFeatured = false }: Propert
   const [isFavorited, setIsFavorited] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [authTab, setAuthTab] = useState("login");
+  const [showMortgageCalculator, setShowMortgageCalculator] = useState(false);
+  const [showMessagesModal, setShowMessagesModal] = useState(false);
 
   // Check if property is favorited
   const { data: favoriteStatus } = useQuery({
@@ -99,6 +103,37 @@ export default function PropertyCard({ property, showFeatured = false }: Propert
       toast({
         title: "Error",
         description: "Failed to remove from favorites. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Contact seller mutation
+  const contactSellerMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest('POST', '/api/conversations', { propertyId: property.id });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Conversation started",
+        description: "You can now message the seller about this property.",
+      });
+      // Open messages modal
+      setShowMessagesModal(true);
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Sign in required",
+          description: "Please sign in to contact the seller.",
+          variant: "destructive",
+        });
+        setShowAuthDialog(true);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to start conversation. Please try again.",
         variant: "destructive",
       });
     },
@@ -215,15 +250,52 @@ export default function PropertyCard({ property, showFeatured = false }: Propert
             )}
           </div>
           
-          <div className="flex items-center justify-between">
-            <div className="text-xl font-bold text-primary">
-              {formatPrice(property.price)}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="text-xl font-bold text-primary">
+                {formatPrice(property.price)}
+              </div>
+              <Button asChild>
+                <Link href={`/property/${property.id}`}>
+                  View Details
+                </Link>
+              </Button>
             </div>
-            <Button asChild>
-              <Link href={`/property/${property.id}`}>
-                View Details
-              </Link>
-            </Button>
+            
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              {currentUser?.uid !== property.ownerId && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    contactSellerMutation.mutate();
+                  }}
+                  disabled={contactSellerMutation.isPending}
+                  className="flex-1"
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Message
+                </Button>
+              )}
+              {property.propertyType !== 'apartment' && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowMortgageCalculator(true);
+                  }}
+                  className="flex-1"
+                >
+                  <Calculator className="h-4 w-4 mr-2" />
+                  Calculate
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -257,6 +329,30 @@ export default function PropertyCard({ property, showFeatured = false }: Propert
           </Tabs>
         </DialogContent>
       </Dialog>
+
+      {/* Mortgage Calculator Modal */}
+      <MortgageCalculatorModal
+        isOpen={showMortgageCalculator}
+        onClose={() => setShowMortgageCalculator(false)}
+        property={{
+          id: property.id,
+          title: property.title,
+          price: property.price,
+          location: property.location,
+          propertyType: property.propertyType,
+          bedrooms: property.bedrooms,
+          bathrooms: property.bathrooms,
+          squareFootage: property.squareFootage || undefined,
+          yearBuilt: property.yearBuilt || undefined,
+          lotSize: (property as any).lotSize || undefined,
+        }}
+      />
+
+      {/* Messages Modal */}
+      <MessagesModal
+        isOpen={showMessagesModal}
+        onClose={() => setShowMessagesModal(false)}
+      />
     </>
   );
 }

@@ -22,6 +22,11 @@ import TermsOfService from "@/pages/terms-of-service";
 import HelpCenter from "@/pages/help-center";
 import AdminPage from "@/pages/admin";
 import AdminSignup from "@/pages/adminsu";
+import Messages from "@/pages/messages";
+import PropertyGuides from "@/pages/property-guides";
+import MarketReports from "@/pages/market-reports";
+import InvestmentTips from "@/pages/investment-tips";
+import AgentDirectory from "@/pages/agent-directory";
 
 function Router() {
   const { currentUser, loading } = useAuth();
@@ -48,6 +53,10 @@ function Router() {
           <Route path="/help-center" component={HelpCenter} />
           <Route path="/help-center/:articleId" component={HelpCenter} />
           <Route path="/mortgage-calculator" component={MortgageCalculatorPage} />
+          <Route path="/property-guides" component={PropertyGuides} />
+          <Route path="/market-reports" component={MarketReports} />
+          <Route path="/investment-tips" component={InvestmentTips} />
+          <Route path="/agent-directory" component={AgentDirectory} />
           <Route path="/admin" component={AdminPage} />
           <Route path="/adminsu" component={AdminSignup} />
         </>
@@ -62,11 +71,16 @@ function Router() {
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/profile" component={Profile} />
           <Route path="/favorites" component={Favorites} />
+          <Route path="/messages" component={Messages} />
           <Route path="/contact" component={ContactUs} />
           <Route path="/cookie-policy" component={CookiePolicy} />
           <Route path="/terms-of-service" component={TermsOfService} />
           <Route path="/help-center" component={HelpCenter} />
           <Route path="/help-center/:articleId" component={HelpCenter} />
+          <Route path="/property-guides" component={PropertyGuides} />
+          <Route path="/market-reports" component={MarketReports} />
+          <Route path="/investment-tips" component={InvestmentTips} />
+          <Route path="/agent-directory" component={AgentDirectory} />
           <Route path="/admin" component={AdminPage} />
           <Route path="/adminsu" component={AdminSignup} />
         </>

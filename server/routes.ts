@@ -8,10 +8,18 @@ import {
   insertReviewSchema,
   insertBookingSchema,
   insertContactMessageSchema,
+  conversations,
+  messages,
+  properties,
+  users,
+  type ConversationWithDetails,
+  type MessageWithSender,
 } from "@shared/schema";
 import { adminAuth } from './firebase';
 import multer from "multer";
 import { ImageService } from "./cloudflare-r2";
+import { eq, and, or, desc, asc, count } from "drizzle-orm";
+import { db } from "./db";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const server = createServer(app);
@@ -864,6 +872,342 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting user account:', error);
       res.status(500).json({ message: 'Failed to delete user account.' });
+    }
+  });
+
+  // ==================== MESSAGING ENDPOINTS ====================
+
+  // Get all conversations for a user
+  app.get('/api/conversations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+      
+      // First get conversations without user details
+      const conversationList = await db
+        .select({
+          id: conversations.id,
+          propertyId: conversations.propertyId,
+          buyerId: conversations.buyerId,
+          sellerId: conversations.sellerId,
+          lastMessageId: conversations.lastMessageId,
+          lastMessageAt: conversations.lastMessageAt,
+          createdAt: conversations.createdAt,
+          updatedAt: conversations.updatedAt,
+        })
+        .from(conversations)
+        .where(or(
+          eq(conversations.buyerId, userId),
+          eq(conversations.sellerId, userId)
+        ))
+        .orderBy(desc(conversations.lastMessageAt));
+
+      // Then get property and user details for each conversation
+      const userConversations = await Promise.all(
+        conversationList.map(async (conv) => {
+          // Get property details
+          const [property] = await db
+            .select()
+            .from(properties)
+            .where(eq(properties.id, conv.propertyId))
+            .limit(1);
+
+          // Get buyer details
+          const [buyer] = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, conv.buyerId))
+            .limit(1);
+
+          // Get seller details
+          const [seller] = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, conv.sellerId))
+            .limit(1);
+
+          return {
+            ...conv,
+            property: {
+              id: property.id,
+              title: property.title,
+              price: property.price,
+              location: property.location,
+              primaryImage: property.primaryImage,
+            },
+            buyer: {
+              id: buyer.id,
+              firstName: buyer.firstName,
+              lastName: buyer.lastName,
+              profileImageUrl: buyer.profileImageUrl,
+            },
+            seller: {
+              id: seller.id,
+              firstName: seller.firstName,
+              lastName: seller.lastName,
+              profileImageUrl: seller.profileImageUrl,
+            },
+          };
+        })
+      );
+
+      // Get unread count for each conversation
+      const conversationsWithUnreadCount = await Promise.all(
+        userConversations.map(async (conv) => {
+          const unreadCount = await db
+            .select({ count: count() })
+            .from(messages)
+            .where(and(
+              eq(messages.conversationId, conv.id),
+              eq(messages.receiverId, userId),
+              eq(messages.isRead, false)
+            ));
+
+          return {
+            ...conv,
+            unreadCount: unreadCount[0]?.count || 0,
+          };
+        })
+      );
+
+      res.json(conversationsWithUnreadCount);
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+      res.status(500).json({ message: 'Failed to fetch conversations.' });
+    }
+  });
+
+  // Get or create conversation for a property
+  app.post('/api/conversations', isAuthenticated, async (req: any, res) => {
+    try {
+      const { propertyId } = req.body;
+      const userId = req.user.uid;
+
+      if (!propertyId) {
+        return res.status(400).json({ message: 'Property ID is required.' });
+      }
+
+      // Get property details
+      const property = await db
+        .select()
+        .from(properties)
+        .where(eq(properties.id, propertyId))
+        .limit(1);
+
+      if (property.length === 0) {
+        return res.status(404).json({ message: 'Property not found.' });
+      }
+
+      const sellerId = property[0].ownerId;
+
+      if (userId === sellerId) {
+        return res.status(400).json({ message: 'Cannot message yourself.' });
+      }
+
+      // Check if conversation already exists
+      const existingConversation = await db
+        .select()
+        .from(conversations)
+        .where(and(
+          eq(conversations.propertyId, propertyId),
+          eq(conversations.buyerId, userId),
+          eq(conversations.sellerId, sellerId)
+        ))
+        .limit(1);
+
+      if (existingConversation.length > 0) {
+        return res.json(existingConversation[0]);
+      }
+
+      // Create new conversation
+      const conversationId = crypto.randomUUID();
+      const newConversation = await db
+        .insert(conversations)
+        .values({
+          id: conversationId,
+          propertyId,
+          buyerId: userId,
+          sellerId,
+        })
+        .returning();
+
+      res.status(201).json(newConversation[0]);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      res.status(500).json({ message: 'Failed to create conversation.' });
+    }
+  });
+
+  // Get messages for a conversation
+  app.get('/api/conversations/:conversationId/messages', isAuthenticated, async (req: any, res) => {
+    try {
+      const { conversationId } = req.params;
+      const userId = req.user.uid;
+
+      // Verify user is part of this conversation
+      const conversation = await db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, conversationId))
+        .limit(1);
+
+      if (conversation.length === 0) {
+        return res.status(404).json({ message: 'Conversation not found.' });
+      }
+
+      const conv = conversation[0];
+      if (conv.buyerId !== userId && conv.sellerId !== userId) {
+        return res.status(403).json({ message: 'Access denied.' });
+      }
+
+      // Get messages first
+      const messageList = await db
+        .select()
+        .from(messages)
+        .where(eq(messages.conversationId, conversationId))
+        .orderBy(asc(messages.createdAt));
+
+      // Then get sender details for each message
+      const conversationMessages = await Promise.all(
+        messageList.map(async (message) => {
+          const [sender] = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, message.senderId))
+            .limit(1);
+
+          return {
+            id: message.id,
+            conversationId: message.conversationId,
+            senderId: message.senderId,
+            receiverId: message.receiverId,
+            propertyId: message.propertyId,
+            messageText: message.messageText,
+            messageType: message.messageType,
+            isRead: message.isRead,
+            createdAt: message.createdAt,
+            updatedAt: message.updatedAt,
+            sender: {
+              id: sender.id,
+              firstName: sender.firstName,
+              lastName: sender.lastName,
+              profileImageUrl: sender.profileImageUrl,
+            },
+          };
+        })
+      );
+
+      res.json(conversationMessages);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      res.status(500).json({ message: 'Failed to fetch messages.' });
+    }
+  });
+
+  // Send a message
+  app.post('/api/conversations/:conversationId/messages', isAuthenticated, async (req: any, res) => {
+    try {
+      const { conversationId } = req.params;
+      const { messageText, messageType = 'text' } = req.body;
+      const userId = req.user.uid;
+
+      if (!messageText?.trim()) {
+        return res.status(400).json({ message: 'Message text is required.' });
+      }
+
+      // Verify user is part of this conversation
+      const conversation = await db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, conversationId))
+        .limit(1);
+
+      if (conversation.length === 0) {
+        return res.status(404).json({ message: 'Conversation not found.' });
+      }
+
+      const conv = conversation[0];
+      if (conv.buyerId !== userId && conv.sellerId !== userId) {
+        return res.status(403).json({ message: 'Access denied.' });
+      }
+
+      const receiverId = conv.buyerId === userId ? conv.sellerId : conv.buyerId;
+
+      // Create message
+      const newMessage = await db
+        .insert(messages)
+        .values({
+          conversationId,
+          senderId: userId,
+          receiverId,
+          propertyId: conv.propertyId,
+          messageText: messageText.trim(),
+          messageType,
+        })
+        .returning();
+
+      res.status(201).json(newMessage[0]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      res.status(500).json({ message: 'Failed to send message.' });
+    }
+  });
+
+  // Mark messages as read
+  app.put('/api/conversations/:conversationId/messages/read', isAuthenticated, async (req: any, res) => {
+    try {
+      const { conversationId } = req.params;
+      const userId = req.user.uid;
+
+      // Verify user is part of this conversation
+      const conversation = await db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, conversationId))
+        .limit(1);
+
+      if (conversation.length === 0) {
+        return res.status(404).json({ message: 'Conversation not found.' });
+      }
+
+      const conv = conversation[0];
+      if (conv.buyerId !== userId && conv.sellerId !== userId) {
+        return res.status(403).json({ message: 'Access denied.' });
+      }
+
+      // Mark all unread messages as read
+      await db
+        .update(messages)
+        .set({ isRead: true })
+        .where(and(
+          eq(messages.conversationId, conversationId),
+          eq(messages.receiverId, userId),
+          eq(messages.isRead, false)
+        ));
+
+      res.json({ message: 'Messages marked as read.' });
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+      res.status(500).json({ message: 'Failed to mark messages as read.' });
+    }
+  });
+
+  // Get unread message count
+  app.get('/api/messages/unread-count', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.uid;
+
+      const unreadCount = await db
+        .select({ count: count() })
+        .from(messages)
+        .where(and(
+          eq(messages.receiverId, userId),
+          eq(messages.isRead, false)
+        ));
+
+      res.json({ unreadCount: unreadCount[0]?.count || 0 });
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+      res.status(500).json({ message: 'Failed to fetch unread count.' });
     }
   });
 
