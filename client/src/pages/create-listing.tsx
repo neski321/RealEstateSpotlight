@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { ImageUpload } from "@/components/image-upload";
 
 export default function CreateListing() {
   const [, navigate] = useLocation();
@@ -49,6 +50,7 @@ export default function CreateListing() {
   const [currentStep, setCurrentStep] = useState(1);
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [newImageUrl, setNewImageUrl] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -143,6 +145,25 @@ export default function CreateListing() {
 
   const handleImageRemove = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleImageUpload = async (imageUrl: string) => {
+    setUploadingImage(true);
+    try {
+      setImages(prev => [...prev, imageUrl]);
+      toast({
+        title: "Success",
+        description: "Image uploaded successfully"
+      });
+    } catch (error) {
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload image",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -438,22 +459,43 @@ export default function CreateListing() {
               {currentStep === 3 && (
                 <>
                   <div className="mb-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Button type="button" onClick={handleImageAdd}>
-                        Add Image
-                      </Button>
-                    </div>
-                    <div className="flex flex-wrap gap-4">
-                      {images.map((img, idx) => (
-                        <div key={idx} className="relative w-32 h-32 border rounded overflow-hidden">
-                          <img src={img} alt={`Property image ${idx + 1}`} className="object-cover w-full h-full" />
-                          <button type="button" className="absolute top-1 right-1 bg-white rounded-full p-1" onClick={() => handleImageRemove(idx)}>
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-base font-medium">Property Images</Label>
+                        <p className="text-sm text-gray-600 mb-4">Upload images of your property. The first image will be used as the main photo.</p>
+                      </div>
+                      
+                      {/* Image Upload Component */}
+                      <ImageUpload
+                        value=""
+                        onChange={handleImageUpload}
+                        folder="properties"
+                        label="Upload Property Image"
+                        className="mb-4"
+                      />
+                      
+                      {/* Alternative: URL Input */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <Button type="button" variant="outline" onClick={handleImageAdd}>
+                          Add Image URL
+                        </Button>
+                        <span className="text-sm text-gray-500">or add image by URL</span>
+                      </div>
+                      
+                      {/* Display uploaded images */}
+                      <div className="flex flex-wrap gap-4">
+                        {images.map((img, idx) => (
+                          <div key={idx} className="relative w-32 h-32 border rounded overflow-hidden">
+                            <img src={img} alt={`Property image ${idx + 1}`} className="object-cover w-full h-full" />
+                            <button type="button" className="absolute top-1 right-1 bg-white rounded-full p-1" onClick={() => handleImageRemove(idx)}>
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
+                  
                   <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
                     <DialogContent>
                       <DialogHeader>

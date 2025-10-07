@@ -55,3 +55,4 @@ FIREBASE_SETUP.md
 *.log
 server/package-lock.json
 migrations/20241207_add_contact_messages.sql
+CLOUDFLARE_R2_SETUP_GUIDE.md
