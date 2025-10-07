@@ -8,19 +8,21 @@ import {
   DropdownMenuContent, 
   DropdownMenuItem, 
   DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Home, Search, Plus, User, Settings, LogOut, Heart, Shield } from "lucide-react";
+import { Home, Search, Plus, User, Settings, LogOut, Heart, Shield, MessageCircle } from "lucide-react";
 import { useState } from "react";
+import MessagesModal from "@/components/messages-modal";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Sun, Moon } from "lucide-react";
 
 export default function Navigation() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { currentUser, signOutUser, logCurrentUserIdToken, roles, currentRole, switchRole } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const { theme, toggleTheme } = useTheme();
+  const [showMessagesModal, setShowMessagesModal] = useState(false);
 
   // Debugging output
   console.log('roles:', roles, 'currentRole:', currentRole, 'currentUser:', currentUser);
@@ -142,6 +144,10 @@ export default function Navigation() {
                         Profile
                       </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowMessagesModal(true)} className="flex items-center cursor-pointer">
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      Messages
+                    </DropdownMenuItem>
                     {roles.includes('admin') && (
                       <DropdownMenuItem asChild>
                         <Link href="/admin" className="flex items-center">
@@ -173,6 +179,12 @@ export default function Navigation() {
           </div>
         </div>
       </div>
+      
+      {/* Messages Modal */}
+      <MessagesModal
+        isOpen={showMessagesModal}
+        onClose={() => setShowMessagesModal(false)}
+      />
     </nav>
   );
 }

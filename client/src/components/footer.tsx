@@ -35,10 +35,10 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">Resources</h3>
             <ul className="space-y-2 text-muted-foreground">
-              <li><a href="#" className="hover:text-primary">Property Guides</a></li>
-              <li><a href="#" className="hover:text-primary">Market Reports</a></li>
-              <li><a href="#" className="hover:text-primary">Investment Tips</a></li>
-              <li><a href="#" className="hover:text-primary">Agent Directory</a></li>
+              <li><a href="/property-guides" className="hover:text-primary">Property Guides</a></li>
+              <li><a href="/market-reports" className="hover:text-primary">Market Reports</a></li>
+              <li><a href="/investment-tips" className="hover:text-primary">Investment Tips</a></li>
+              <li><a href="/agent-directory" className="hover:text-primary">Agent Directory</a></li>
               <li><a href="/mortgage-calculator" className="hover:text-primary">Mortgage Calculator</a></li>
             </ul>
           </div>
